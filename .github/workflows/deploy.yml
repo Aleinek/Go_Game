@@ -6,10 +6,11 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  # Nazwa obrazu: np. twoj-user/twoje-repo
-  IMAGE_NAME: ${{ github.repository }}
+  IMAGE_NAME: aleinek/go_game
+  CONTAINER_NAME: go-game-container
 
 jobs:
+  # KROK 1: Budowanie obrazu i wysyłanie do rejestru GitHub
   build-and-push:
     runs-on: ubuntu-latest
     permissions:
@@ -34,35 +35,36 @@ jobs:
           push: true
           tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
 
+  # KROK 2: Logowanie na VPS i uruchomienie kontenera
   deploy-to-vps:
     needs: build-and-push
     runs-on: ubuntu-latest
 
     steps:
-      - name: Deploy to VPS via SSH
+      - name: Deploy via SSH
         uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
+          port: 22
           script: |
-            # 1. Zaloguj się do rejestru (używając tokenu lub wcześniej skonfigurowanego auth)
-            # Uwaga: Najbezpieczniej jest wygenerować PAT (Personal Access Token) na GitHubie
-            # i dodać go na VPS komendą: docker login ghcr.io -u TWOJ_USER -p TWOJ_TOKEN
+            # 1. Pobierz najnowszy obraz (wymuszenie pobrania świeżej wersji)
+            docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
             
-            # 2. Pobierz najnowszy obraz
-            docker pull ghcr.io/${{ env.IMAGE_NAME }}:latest
+            # 2. Zatrzymaj stary kontener (jeśli istnieje)
+            docker stop ${{ env.CONTAINER_NAME }} || true
             
-            # 3. Zatrzymaj i usuń stary kontener (jeśli istnieje) || true zapobiega błędom jeśli nie ma kontenera
-            docker stop myapp-container || true
-            docker rm myapp-container || true
+            # 3. Usuń stary kontener (jeśli istnieje)
+            docker rm ${{ env.CONTAINER_NAME }} || true
             
-            # 4. Uruchom nowy kontener w tle
+            # 4. Uruchom nowy kontener
+            # Flaga --restart always sprawia, że wstanie sam po restarcie VPS
             docker run -d \
-              --name myapp-container \
+              --name ${{ env.CONTAINER_NAME }} \
               --restart always \
               -p 8080:8080 \
-              ghcr.io/${{ env.IMAGE_NAME }}:latest
-            
-            # 5. Posprzątaj stare, nieużywane obrazy (żeby nie zapchać dysku)
+              ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+              
+            # 5. Wyczyść stare, nieużywane obrazy (zwalnianie miejsca na dysku)
             docker image prune -f
