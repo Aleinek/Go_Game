@@ -1,0 +1,494 @@
+@startuml ERD_Go_Game
+!define TABLE(name) entity name << (T,#FFAAAA) >>
+!define PRIMARY_KEY(x) <b><u>x</u></b>
+!define FOREIGN_KEY(x) <i>x</i>
+
+title Diagram ERD - System Gry w Go (Iteracja 1)
+
+TABLE(players) {
+    PRIMARY_KEY(id) : UUID
+    --
+    nickname : VARCHAR(50)
+    created_at : TIMESTAMP
+    is_connected : BOOLEAN
+    last_activity : TIMESTAMP
+}
+
+TABLE(games) {
+    PRIMARY_KEY(id) : UUID
+    --
+    FOREIGN_KEY(black_player_id) : UUID
+    FOREIGN_KEY(white_player_id) : UUID
+    board_size : INT
+    status : ENUM
+    current_turn : ENUM
+    created_at : TIMESTAMP
+    updated_at : TIMESTAMP
+}
+
+TABLE(moves) {
+    PRIMARY_KEY(id) : UUID
+    --
+    FOREIGN_KEY(game_id) : UUID
+    FOREIGN_KEY(player_id) : UUID
+    move_number : INT
+    x_position : INT
+    y_position : INT
+    is_pass : BOOLEAN
+    captured_stones : INT
+    created_at : TIMESTAMP
+}
+
+TABLE(board_states) {
+    PRIMARY_KEY(id) : UUID
+    --
+    FOREIGN_KEY(game_id) : UUID
+    move_number : INT
+    board_data : TEXT
+    black_captured : INT
+    white_captured : INT
+    created_at : TIMESTAMP
+}
+
+TABLE(waiting_queue) {
+    PRIMARY_KEY(id) : UUID
+    --
+    FOREIGN_KEY(player_id) : UUID
+    preferred_board_size : INT
+    joined_at : TIMESTAMP
+}
+
+players ||--o{ games : "plays as black"
+players ||--o{ games : "plays as white"
+games ||--o{ moves : "has"
+games ||--o{ board_states : "has"
+players ||--o| waiting_queue : "waits in"
+players ||--o{ moves : "makes"
+
+@enduml
+
+' ============================================================
+
+@startuml Sequence_JoinGame
+title Diagram Sekwencji - Dołączanie do Gry
+
+actor "Klient 1\n(Gracz Czarny)" as Client1
+actor "Klient 2\n(Gracz Biały)" as Client2
+participant "API Gateway\n/api" as API
+participant "GameService" as GameSvc
+participant "PlayerService" as PlayerSvc
+participant "MatchmakingService" as MatchSvc
+database "PostgreSQL" as DB
+
+== Rejestracja Gracza 1 ==
+Client1 -> API : POST /api/players\n{nickname: "Player1"}
+API -> PlayerSvc : createPlayer("Player1")
+PlayerSvc -> DB : INSERT INTO players
+DB --> PlayerSvc : player_id
+PlayerSvc --> API : Player object
+API --> Client1 : 201 Created\n{id, nickname, token}
+
+== Dołączenie do kolejki ==
+Client1 -> API : POST /api/games/join\n{boardSize: 19}
+API -> MatchSvc : joinQueue(player_id, 19)
+MatchSvc -> DB : INSERT INTO waiting_queue
+MatchSvc -> DB : SELECT * FROM waiting_queue\nWHERE board_size = 19
+DB --> MatchSvc : [only Player1]
+MatchSvc --> API : waiting
+API --> Client1 : 202 Accepted\n{status: "waiting"}
+
+== Rejestracja i dołączenie Gracza 2 ==
+Client2 -> API : POST /api/players\n{nickname: "Player2"}
+API -> PlayerSvc : createPlayer("Player2")
+PlayerSvc -> DB : INSERT INTO players
+PlayerSvc --> API : Player object
+API --> Client2 : 201 Created\n{id, nickname, token}
+
+Client2 -> API : POST /api/games/join\n{boardSize: 19}
+API -> MatchSvc : joinQueue(player_id, 19)
+MatchSvc -> DB : SELECT * FROM waiting_queue\nWHERE board_size = 19
+DB --> MatchSvc : [Player1, Player2]
+
+== Tworzenie Gry ==
+MatchSvc -> GameSvc : createGame(player1_id, player2_id, 19)
+GameSvc -> DB : INSERT INTO games
+GameSvc -> DB : INSERT INTO board_states\n(initial empty board)
+DB --> GameSvc : game_id
+GameSvc --> MatchSvc : Game object
+MatchSvc -> DB : DELETE FROM waiting_queue\nWHERE player_id IN (...)
+MatchSvc --> API : game_created
+API --> Client2 : 201 Created\n{gameId, status: "started", color: "white"}
+API --> Client1 : WebSocket: game_started\n{gameId, status: "started", color: "black"}
+
+@enduml
+
+' ============================================================
+
+@startuml Sequence_MakeMove
+title Diagram Sekwencji - Wykonanie Ruchu
+
+actor "Klient\n(Gracz Czarny)" as Client
+actor "Przeciwnik\n(Gracz Biały)" as Opponent
+participant "API Gateway" as API
+participant "GameService" as GameSvc
+participant "BoardValidator" as Validator
+participant "CaptureService" as CaptureSvc
+database "PostgreSQL" as DB
+
+== Wykonanie Ruchu ==
+Client -> API : POST /api/games/{gameId}/moves\n{x: 3, y: 3}
+API -> GameSvc : makeMove(gameId, playerId, 3, 3)
+
+GameSvc -> DB : SELECT * FROM games\nWHERE id = gameId
+DB --> GameSvc : Game(status, current_turn)
+
+alt Nie tura gracza
+    GameSvc --> API : 400 Bad Request
+    API --> Client : {error: "Not your turn"}
+else Tura gracza
+    GameSvc -> DB : SELECT * FROM board_states\nWHERE game_id = gameId\nORDER BY move_number DESC
+    DB --> GameSvc : current_board_state
+    
+    GameSvc -> Validator : validateMove(board, x, y, color)
+    
+    alt Pozycja zajęta
+        Validator --> GameSvc : invalid (position occupied)
+        GameSvc --> API : 400 Bad Request
+        API --> Client : {error: "Position occupied"}
+    else Ruch samobójczy
+        Validator --> GameSvc : invalid (suicide move)
+        GameSvc --> API : 400 Bad Request
+        API --> Client : {error: "Suicide move not allowed"}
+    else Ruch poprawny
+        Validator --> GameSvc : valid
+        
+        GameSvc -> CaptureSvc : checkCaptures(board, x, y, color)
+        CaptureSvc -> CaptureSvc : findChains()
+        CaptureSvc -> CaptureSvc : checkLiberties()
+        CaptureSvc --> GameSvc : capturedStones[]
+        
+        GameSvc -> DB : INSERT INTO moves
+        GameSvc -> DB : INSERT INTO board_states\n(new board with captures)
+        GameSvc -> DB : UPDATE games\nSET current_turn = opposite
+        
+        DB --> GameSvc : success
+        GameSvc --> API : Move result
+        API --> Client : 200 OK\n{move, board, captured}
+        API --> Opponent : WebSocket: move_made\n{move, board, captured}
+    end
+end
+
+@enduml
+
+' ============================================================
+
+@startuml Sequence_PassAndEndGame
+title Diagram Sekwencji - Pass i Zakończenie Gry
+
+actor "Gracz Czarny" as Black
+actor "Gracz Biały" as White
+participant "API Gateway" as API
+participant "GameService" as GameSvc
+participant "ScoringService" as ScoreSvc
+database "PostgreSQL" as DB
+
+== Pierwszy Pass ==
+Black -> API : POST /api/games/{gameId}/pass
+API -> GameSvc : passMove(gameId, blackPlayerId)
+GameSvc -> DB : INSERT INTO moves\n(is_pass = true)
+GameSvc -> DB : UPDATE games\nSET current_turn = 'white'
+GameSvc --> API : pass recorded
+API --> Black : 200 OK\n{status: "passed"}
+API --> White : WebSocket: opponent_passed
+
+== Drugi Pass - Koniec Gry ==
+White -> API : POST /api/games/{gameId}/pass
+API -> GameSvc : passMove(gameId, whitePlayerId)
+
+GameSvc -> DB : SELECT * FROM moves\nWHERE game_id = gameId\nORDER BY move_number DESC
+DB --> GameSvc : [last_move.is_pass = true]
+
+note right of GameSvc
+    Wykryto dwa kolejne passy
+    -> Gra kończy się
+end note
+
+GameSvc -> ScoreSvc : calculateScore(game)
+ScoreSvc -> DB : SELECT * FROM board_states\nWHERE game_id = gameId\nORDER BY move_number DESC
+DB --> ScoreSvc : final_board
+ScoreSvc -> ScoreSvc : countTerritory()
+ScoreSvc -> ScoreSvc : countCaptures()
+ScoreSvc --> GameSvc : {black: 45, white: 52, winner: "white"}
+
+GameSvc -> DB : UPDATE games\nSET status = 'finished',\nwinner_id = white_player_id
+GameSvc --> API : game_ended
+API --> White : 200 OK\n{status: "finished", winner: "white", score: {...}}
+API --> Black : WebSocket: game_ended\n{status: "finished", winner: "white", score: {...}}
+
+@enduml
+
+' ============================================================
+
+@startuml Sequence_Resign
+title Diagram Sekwencji - Poddanie się (Resign)
+
+actor "Gracz Czarny" as Black
+actor "Gracz Biały" as White
+participant "API Gateway" as API
+participant "GameService" as GameSvc
+database "PostgreSQL" as DB
+
+Black -> API : POST /api/games/{gameId}/resign
+API -> GameSvc : resignGame(gameId, blackPlayerId)
+
+GameSvc -> DB : SELECT * FROM games\nWHERE id = gameId
+DB --> GameSvc : Game object
+
+GameSvc -> DB : UPDATE games\nSET status = 'finished',\nwinner_id = white_player_id
+DB --> GameSvc : success
+
+GameSvc --> API : game_ended
+API --> Black : 200 OK\n{status: "resigned", winner: "white"}
+API --> White : WebSocket: opponent_resigned\n{status: "finished", winner: "white"}
+
+@enduml
+
+' ============================================================
+
+@startuml Component_Architecture
+title Architektura Komponentów - System Go Game
+
+package "Klient (Console Client)" {
+    [CLI Interface] as CLI
+    [Game Display] as Display
+    [Input Handler] as Input
+    [WebSocket Client] as WSClient
+    [HTTP Client] as HTTPClient
+}
+
+package "Serwer (Go Game Server)" {
+    package "API Layer" {
+        [REST Controller] as REST
+        [WebSocket Handler] as WSHandler
+    }
+    
+    package "Service Layer" {
+        [GameService] as GameSvc
+        [PlayerService] as PlayerSvc
+        [MatchmakingService] as MatchSvc
+        [BoardService] as BoardSvc
+    }
+    
+    package "Domain Layer" {
+        [Board] as Board
+        [Stone] as Stone
+        [Chain] as Chain
+        [Game] as Game
+        [Player] as Player
+    }
+    
+    package "Repository Layer" {
+        [GameRepository] as GameRepo
+        [PlayerRepository] as PlayerRepo
+        [MoveRepository] as MoveRepo
+        [BoardStateRepository] as BoardStateRepo
+    }
+    
+    package "Validation" {
+        [MoveValidator] as Validator
+        [CaptureCalculator] as Capture
+        [LibertyChecker] as Liberty
+    }
+}
+
+database "PostgreSQL" as DB
+
+CLI --> Input
+CLI --> Display
+Input --> HTTPClient
+Input --> WSClient
+WSClient --> WSHandler
+HTTPClient --> REST
+
+REST --> GameSvc
+REST --> PlayerSvc
+REST --> MatchSvc
+WSHandler --> GameSvc
+
+GameSvc --> BoardSvc
+GameSvc --> Validator
+BoardSvc --> Board
+BoardSvc --> Capture
+Capture --> Liberty
+Capture --> Chain
+
+GameSvc --> GameRepo
+PlayerSvc --> PlayerRepo
+GameSvc --> MoveRepo
+BoardSvc --> BoardStateRepo
+
+GameRepo --> DB
+PlayerRepo --> DB
+MoveRepo --> DB
+BoardStateRepo --> DB
+
+@enduml
+
+' ============================================================
+
+@startuml Class_Domain
+title Diagram Klas - Warstwa Domenowa
+
+enum StoneColor {
+    BLACK
+    WHITE
+    EMPTY
+}
+
+enum GameStatus {
+    WAITING
+    IN_PROGRESS
+    FINISHED
+    RESIGNED
+}
+
+class Position {
+    -x: int
+    -y: int
+    +Position(x: int, y: int)
+    +getX(): int
+    +getY(): int
+    +getNeighbors(): List<Position>
+    +isValid(boardSize: int): boolean
+    +equals(other: Object): boolean
+    +hashCode(): int
+}
+
+class Stone {
+    -position: Position
+    -color: StoneColor
+    +Stone(position: Position, color: StoneColor)
+    +getPosition(): Position
+    +getColor(): StoneColor
+}
+
+class Chain {
+    -stones: Set<Stone>
+    -color: StoneColor
+    +Chain(color: StoneColor)
+    +addStone(stone: Stone): void
+    +getStones(): Set<Stone>
+    +getLiberties(board: Board): Set<Position>
+    +merge(other: Chain): Chain
+    +isCaptured(board: Board): boolean
+}
+
+class Board {
+    -size: int
+    -grid: StoneColor[][]
+    -chains: Map<Position, Chain>
+    +Board(size: int)
+    +getSize(): int
+    +getStone(position: Position): StoneColor
+    +placeStone(position: Position, color: StoneColor): List<Stone>
+    +isValidMove(position: Position, color: StoneColor): boolean
+    +isEmpty(position: Position): boolean
+    +copy(): Board
+    -updateChains(position: Position): void
+    -checkCaptures(position: Position, color: StoneColor): List<Stone>
+    -findChain(position: Position): Chain
+}
+
+class Player {
+    -id: UUID
+    -nickname: String
+    -capturedStones: int
+    +Player(id: UUID, nickname: String)
+    +getId(): UUID
+    +getNickname(): String
+    +addCaptured(count: int): void
+    +getCapturedCount(): int
+}
+
+class Move {
+    -id: UUID
+    -player: Player
+    -position: Position
+    -moveNumber: int
+    -isPass: boolean
+    -capturedStones: int
+    -timestamp: LocalDateTime
+    +Move(player: Player, position: Position, moveNumber: int)
+    +Move.pass(player: Player, moveNumber: int)$
+    +isPass(): boolean
+}
+
+class Game {
+    -id: UUID
+    -board: Board
+    -blackPlayer: Player
+    -whitePlayer: Player
+    -currentTurn: StoneColor
+    -status: GameStatus
+    -moves: List<Move>
+    -consecutivePasses: int
+    +Game(blackPlayer: Player, whitePlayer: Player, boardSize: int)
+    +makeMove(position: Position): MoveResult
+    +pass(): MoveResult
+    +resign(player: Player): void
+    +getCurrentPlayer(): Player
+    +isGameOver(): boolean
+    +getWinner(): Player
+    -switchTurn(): void
+    -checkGameEnd(): void
+}
+
+class MoveResult {
+    -success: boolean
+    -errorMessage: String
+    -capturedStones: List<Stone>
+    -gameEnded: boolean
+    +MoveResult(success: boolean)
+    +getSuccess(): boolean
+    +getCapturedStones(): List<Stone>
+}
+
+Position "1" --> "0..1" Stone
+Stone "*" --o "1" Chain
+Board "1" *-- "0..*" Stone
+Board "1" o-- "*" Chain
+Game "1" *-- "1" Board
+Game "1" o-- "2" Player
+Game "1" *-- "*" Move
+Move "1" --> "1" Player
+Move "1" --> "0..1" Position
+
+@enduml
+
+' ============================================================
+
+@startuml State_Game
+title Diagram Stanów - Cykl Życia Gry
+
+[*] --> Waiting : create game
+
+Waiting --> InProgress : second player joins
+Waiting --> Cancelled : timeout / player leaves
+
+InProgress --> InProgress : make move
+InProgress --> InProgress : pass (single)
+InProgress --> Scoring : two consecutive passes
+InProgress --> Finished : player resigns
+
+Scoring --> Finished : score calculated
+
+Finished --> [*]
+Cancelled --> [*]
+
+state InProgress {
+    [*] --> BlackTurn
+    BlackTurn --> WhiteTurn : black moves/passes
+    WhiteTurn --> BlackTurn : white moves/passes
+}
+
+@enduml
