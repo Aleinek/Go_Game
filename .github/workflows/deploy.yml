@@ -43,28 +43,34 @@ jobs:
     steps:
       - name: Deploy via SSH
         uses: appleboy/ssh-action@master
+        env:
+          # Mapujemy zmienne GitHuba na zmienne środowiskowe dostępne dla akcji
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_ACTOR: ${{ github.actor }}
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           port: 22
+          # Instrukcja, żeby wysłać te zmienne na serwer VPS
+          envs: GITHUB_TOKEN,GITHUB_ACTOR,REGISTRY,IMAGE_NAME,CONTAINER_NAME
           script: |
-            # 1. Pobierz najnowszy obraz (wymuszenie pobrania świeżej wersji)
-            docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+            # 1. ZALOGUJ SIĘ AUTOMATYCZNIE (To naprawi błąd "denied")
+            echo $GITHUB_TOKEN | docker login ghcr.io -u $GITHUB_ACTOR --password-stdin
             
-            # 2. Zatrzymaj stary kontener (jeśli istnieje)
-            docker stop ${{ env.CONTAINER_NAME }} || true
+            # 2. Pobierz najnowszy obraz
+            docker pull ghcr.io/aleinek/go_game:latest
             
-            # 3. Usuń stary kontener (jeśli istnieje)
-            docker rm ${{ env.CONTAINER_NAME }} || true
+            # 3. Zatrzymaj i usuń stary kontener
+            docker stop go-game-container || true
+            docker rm go-game-container || true
             
-            # 4. Uruchom nowy kontener
-            # Flaga --restart always sprawia, że wstanie sam po restarcie VPS
+            # 4. Uruchom nowy
             docker run -d \
-              --name ${{ env.CONTAINER_NAME }} \
+              --name go-game-container \
               --restart always \
               -p 8080:8080 \
-              ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
-              
-            # 5. Wyczyść stare, nieużywane obrazy (zwalnianie miejsca na dysku)
+              ghcr.io/aleinek/go_game:latest
+            
+            # 5. Posprzątaj
             docker image prune -f
