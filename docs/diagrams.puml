@@ -346,9 +346,9 @@ enum StoneColor {
 }
 
 enum GameStatus {
-    WAITING
-    IN_PROGRESS
-    FINISHED
+    WAITING_FOR_PLAYERS,
+    IN_PROGRESS,
+    FINISHED,
     RESIGNED
 }
 
@@ -375,7 +375,7 @@ class Stone {
 class Chain {
     -stones: Set<Stone>
     -color: StoneColor
-    +Chain(color: StoneColor)
+    +Chain(stones: Set<Stone>, color: StoneColor)
     +addStone(stone: Stone): void
     +getStones(): Set<Stone>
     +getLiberties(board: Board): Set<Position>
@@ -389,7 +389,7 @@ class Board {
     -chains: Map<Position, Chain>
     +Board(size: int)
     +getSize(): int
-    +getStone(position: Position): StoneColor
+    +getStoneAt(position: Position): grid[position.x][position.y]
     +placeStone(position: Position, color: StoneColor): List<Stone>
     +isValidMove(position: Position, color: StoneColor): boolean
     +isEmpty(position: Position): boolean
