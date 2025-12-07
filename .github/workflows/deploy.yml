@@ -6,7 +6,7 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: aleinek/go_game
+  IMAGE_NAME: aleinek/go_game_server
   CONTAINER_NAME: go-game-container
 
 jobs:
