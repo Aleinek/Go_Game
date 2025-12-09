@@ -38,7 +38,7 @@ public class Board {
     }
 
     public boolean isValidMove(Position position, StoneColor color) {
-        return position.isValid(size) && grid[position.getX()][position.getY()] == null;
+        return position.isValid(size) && this.isEmpty(position);
     }
 
     public boolean isEmpty(Position position) {

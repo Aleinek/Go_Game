@@ -21,10 +21,12 @@ public class Chain {
         return stones;
     }
 
+    // oddechy
     public Set<Position> getLiberties(Board board) {
         Set<Position> liberties = new java.util.HashSet<>();
         for (Stone stone : stones) {
             for (Position neighbor : stone.getPosition().getNeighbors()) {
+                // TODO[] lepiej chyba jakby getNeighbours od razu zwracalo tylko valid kamienie
                 if (neighbor.isValid(board.getSize()) && board.getStoneAt(neighbor) == null) {
                     liberties.add(neighbor);
                 }
