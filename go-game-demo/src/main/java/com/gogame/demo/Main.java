@@ -10,10 +10,10 @@ public class Main {
         int boardSize = 9;
         int maxIdx = boardSize - 1;
         
-        Board board = new Board(boardSize);
         Random random = new Random();
-        Player blackPlayer = new Player(null, "czarny");
-        Player whitePlayer = new Player(null, "bialy");
+        Player blackPlayer = new Player(null, "czarny", StoneColor.BLACK);
+        Player whitePlayer = new Player(null, "bialy", StoneColor.WHITE);
+        Board board = new Board(boardSize, whitePlayer, blackPlayer);
         Game game = new Game(blackPlayer, whitePlayer, boardSize, board);
 
         BoardPrinter.printBoard(board);
@@ -31,7 +31,7 @@ public class Main {
                     System.out.println("Podany ruch jest nielegalny, sprobuj ponownie!");
                 }
             }
-            board.updateBoardAfterMove();
+            board.updateTerritory();
             BoardPrinter.printBoard(board);                    
             }
     }

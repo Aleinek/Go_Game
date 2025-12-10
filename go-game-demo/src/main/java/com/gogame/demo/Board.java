@@ -1,10 +1,13 @@
 package com.gogame.demo;
 
+import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Queue;
 import java.util.Set;
 
 import com.gogame.demo.InvalidMoveException.ErrorCode;
@@ -13,11 +16,17 @@ public class Board {
     private final int size;
     private final Stone[][] grid;
     private final Map<Position, Chain> chains;
+    Player blackPlayer;
+    Player whitePlayer;
+    Territory territory;
 
-    public Board(int size) {
+    public Board(int size, Player blackPlayer, Player whitePlayer) {
         this.size = size;
         this.grid = new Stone[size][size];
         this.chains = new HashMap<>();
+        this.blackPlayer = blackPlayer;
+        this.whitePlayer = whitePlayer;
+        this.territory = new Territory(size);
     }
 
     public int getSize() {
@@ -47,10 +56,9 @@ public class Board {
         StoneColor color = stone.getColor();
         Chain mergedChain = null;
 
-        Set<Chain> chainSet = getAllyNeighbouringChainsList(position, color);
+        Set<Chain> chainSet = getAllyNeighbouringChainsSet(position, color);
         mergedChain = new Chain(stone, color);
         if(!chainSet.isEmpty())  {
-
             for (Chain chain : chainSet) {
                 mergedChain = mergedChain.merge(chain);
             } 
@@ -68,8 +76,18 @@ public class Board {
         else if(!isEmpty(position)) 
             throw new InvalidMoveException(ErrorCode.POSITION_OCCUPIED);
 
-        grid[position.getX()][position.getY()] = stone;
-        if(moveIsSuicidal(potentialChain)) {
+        grid[position.getX()][position.getY()] = stone; // dodajemy kamienia na jego potencjalnie miejsce zeby algorytmy sprawdzajaca go widzialy
+        
+        int capturedChains = 0;
+        Set<Chain> enemyChains = getEnemyNeighbouringChainsSet(position, color); 
+        for(Chain enemyChain : enemyChains) {
+            if(isCaptured(enemyChain)) {
+                capturedChains++;
+                removeChain(enemyChain, color);
+            }
+        }
+
+        if(moveIsSuicidal(potentialChain) && capturedChains <= 0) {
             grid[position.getX()][position.getY()] = null;
             throw new InvalidMoveException(ErrorCode.SUICIDE_MOVE);
         } 
@@ -77,10 +95,8 @@ public class Board {
         for (Stone s : potentialChain.getStones()) {
                 chains.put(s.getPosition(), potentialChain);
         }                  
-    }
 
-    public void updateBoardAfterMove() {
-
+        
     }
 
     public List<Position> getEmptyNeighboursPositions(Position position) {
@@ -115,7 +131,7 @@ public class Board {
         return getChainAt(pos) != null;
     }
 
-    public Set<Chain> getAllyNeighbouringChainsList(Position pos, StoneColor color) {
+    public Set<Chain> getAllyNeighbouringChainsSet(Position pos, StoneColor color) {
         Set<Chain> allies = new HashSet<>();
         for(Position neighbour : pos.getNeighbors()) {
             if(neighbour.isValid(size)) { // pozycja nie jest poza plansza
@@ -127,9 +143,118 @@ public class Board {
         return allies;
     }
 
+    public Set<Chain> getEnemyNeighbouringChainsSet(Position pos, StoneColor color) {
+        Set<Chain> enemies = new HashSet<>();
+        for(Position neighbour : pos.getNeighbors()) {
+            if(neighbour.isValid(size)) { // pozycja nie jest poza plansza
+                if(positionContainChain(neighbour))
+                    if(getStoneAt(neighbour).getColor() != color)
+                        enemies.add(getChainAt(neighbour));
+            } 
+        }
+        return enemies;
+    }
+
+    public boolean isCaptured(Chain chain) {
+        return (getBreaths(chain) <= 0);
+    }
+
+    public void removeChain(Chain chain, StoneColor enemyColor) {
+        Set<Stone> capturedStones = chain.getStones();
+        int capturedStonesCount = capturedStones.size();
+        Player enemyPlayer = (enemyColor == StoneColor.BLACK ? blackPlayer : whitePlayer);
+        enemyPlayer.addCaptured(capturedStonesCount);
+        for(Stone capturedStone : capturedStones) {
+            Position capturedStonePos = capturedStone.getPosition();
+            chains.remove(capturedStonePos);
+            grid[capturedStonePos.getX()][capturedStonePos.getY()] = null;
+        }
+    }
 
     public boolean isEmpty(Position position) {
         return getStoneAt(position) == null;
+    }
+
+    public void updateTerritory() {
+        territory.setBlackTerritory(0);
+        territory.setWhiteTerritory(0);
+        territory.setNeutralTerritory(0);
+
+        boolean[][] visited = new boolean[size][size];
+
+        for (int x = 0; x < size; x++) {
+            for (int y = 0; y < size; y++) {
+                Position currentPos = new Position(x, y);
+                
+                // jesli pole jest puste i jeszcze nie było sprawdzone w tej turze
+                if (isEmpty(currentPos) && !visited[x][y]) {
+                    analyzeTerritoryRegion(currentPos, visited);
+                }
+            }
+        }
+    }
+
+    /**
+     * Metoda pomocnicza wykonująca algorytm Flood Fill (BFS) dla spójnego obszaru pustych pól.
+     */
+    private void analyzeTerritoryRegion(Position startNode, boolean[][] visited) {
+        Queue<Position> queue = new LinkedList<>();
+        queue.add(startNode);
+        visited[startNode.getX()][startNode.getY()] = true;
+
+        int emptyPointsCount = 0;
+        boolean touchesBlack = false;
+        boolean touchesWhite = false;
+
+        while (!queue.isEmpty()) {
+            Position current = queue.poll();
+            emptyPointsCount++;
+
+            // Sprawdzamy sąsiadów
+            for (Position neighbor : current.getNeighbors()) {
+                if (!neighbor.isValid(size)) {
+                    continue; // Pomijamy sąsiadów poza planszą
+                }
+
+                if (isEmpty(neighbor)) {
+                    if (!visited[neighbor.getX()][neighbor.getY()]) {
+                        visited[neighbor.getX()][neighbor.getY()] = true;
+                        queue.add(neighbor);
+                    }
+                } else {
+                    Stone stone = getStoneAt(neighbor);
+                    if (stone.getColor() == StoneColor.BLACK) {
+                        touchesBlack = true;
+                    } else if (stone.getColor() == StoneColor.WHITE) {
+                        touchesWhite = true;
+                    }
+                }
+            }
+        }
+
+        // decyzja, do kogo należy terytorium
+        if (touchesBlack && !touchesWhite) {
+            int currentTotal = territory.getBlackTerritory();
+            territory.setBlackTerritory(currentTotal + emptyPointsCount);
+        } else if (!touchesBlack && touchesWhite) {
+            int currentTotal = territory.getWhiteTerritory();
+            territory.setWhiteTerritory(currentTotal + emptyPointsCount);
+        } else {
+            int currentTotal = territory.getNeutralTerritory();
+            territory.setNeutralTerritory(currentTotal + emptyPointsCount);
+        }
+    }
+
+    public Territory getTerritory() {
+        return territory;
+    }
+
+    public Player getBlackPlayer() {
+        return blackPlayer;
+    }
+
+    public Player getWhitePlayer() {
+        return whitePlayer;
     }
 
 }

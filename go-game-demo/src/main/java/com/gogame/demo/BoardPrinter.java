@@ -7,6 +7,13 @@ public class BoardPrinter {
         int maxIdx = boardSize - 1;
         Stone[][] grid = board.getGrid();
 
+        Territory territory = board.getTerritory();
+        int whitePrisoners = board.getBlackPlayer().getCapturedStones();
+        int blackPrisoners = board.getWhitePlayer().getCapturedStones();
+
+        System.out.println("\nTerytorium czarne: " + territory.getBlackTerritory() + ", Terytorium biale: " + territory.getWhiteTerritory());
+        System.out.println("Biali jency: " + whitePrisoners + ", Czarni jency: " + blackPrisoners);
+
         for(int y = 0; y < boardSize; y++) { 
             if(y == 0) {
                 System.out.print("   ");

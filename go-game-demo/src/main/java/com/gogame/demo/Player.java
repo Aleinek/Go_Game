@@ -6,10 +6,12 @@ public class Player {
     UUID id;
     String nickname;
     int capturedStones;
+    StoneColor stoneColor;
 
-    public Player(UUID id, String nickname) {
+    public Player(UUID id, String nickname, StoneColor stoneColor) {
         this.id = id;
         this.nickname = nickname;
+        this.stoneColor = stoneColor;
         this.capturedStones = 0;
     }
 
@@ -27,5 +29,9 @@ public class Player {
 
     public int getCapturedStones() {
         return capturedStones;
+    }
+
+    public StoneColor getStoneColor() {
+        return stoneColor;
     }
 }
