@@ -48,11 +48,8 @@ public class Board {
         Chain mergedChain = null;
 
         Set<Chain> chainSet = getAllyNeighbouringChainsList(position, color);
-        if(chainSet.isEmpty())  
-            mergedChain = new Chain(stone, color);
-        else {
-            // Najpierw połóż kamień jako łańcuch tymczasowy
-            mergedChain = new Chain(stone, color);
+        mergedChain = new Chain(stone, color);
+        if(!chainSet.isEmpty())  {
 
             for (Chain chain : chainSet) {
                 mergedChain = mergedChain.merge(chain);
@@ -64,43 +61,54 @@ public class Board {
 
     public void placeStone(Position position, StoneColor color) {
         Stone stone = new Stone(position, color);
-        Chain potentialChain = getNewStoneChain(stone);
+        Chain potentialChain = getNewStoneChain(stone); 
 
-        if(!position.isValid(size)) {
+        if(!position.isValid(size)) 
             throw new InvalidMoveException(ErrorCode.OUT_OF_BOUNDS);
-        } else if(!isEmpty(position)) {
+        else if(!isEmpty(position)) 
             throw new InvalidMoveException(ErrorCode.POSITION_OCCUPIED);
-        } else if(moveIsSuicidal(potentialChain)) {
+
+        grid[position.getX()][position.getY()] = stone;
+        if(moveIsSuicidal(potentialChain)) {
+            grid[position.getX()][position.getY()] = null;
             throw new InvalidMoveException(ErrorCode.SUICIDE_MOVE);
         } 
         
         for (Stone s : potentialChain.getStones()) {
                 chains.put(s.getPosition(), potentialChain);
-        }      
-            
-        grid[position.getX()][position.getY()] = stone;
+        }                  
     }
 
     public void updateBoardAfterMove() {
 
     }
 
-    public int getLiberties(Chain chain) {
-        return 0;
+    public List<Position> getEmptyNeighboursPositions(Position position) {
+        List<Position> positions = new ArrayList<>();
+        for (Position neighbour : position.getNeighbors()) {
+            if(neighbour.isValid(size)) {
+                if(isEmpty(neighbour))
+                    positions.add(neighbour);
+            }
+        }
+        return positions;
+    }
+
+    public int getBreaths(Chain chain) {
+        Set<Position> breaths = new HashSet<>();
+        for (Stone stone : chain.getStones()) {
+            Position position = stone.getPosition();
+            breaths.addAll(getEmptyNeighboursPositions(position));
+        }
+        return breaths.size();
     }
 
     // te logike bedzie trzeba zrobic na chainach nie na kamieniach
     public boolean moveIsSuicidal(Chain chain) {
-        for(Position neighbour : position.getNeighbors()) {
-            if(neighbour.isValid(size)) {
-                Stone stone = getStoneAt(neighbour);
-                if(stone == null)
-                    return false;
-                else if(stone.getColor() == color)
-                    return false;      
-            }
-        }
-        return true;
+        if(getBreaths(chain) > 0) return false;
+        else return true;
+        // teraz musimy sie dowiedziec czy nasz ruch robi jakis capture ale moze najpierw stestuje gierke
+        
     }
 
     public boolean positionContainChain(Position pos) {
@@ -111,8 +119,9 @@ public class Board {
         Set<Chain> allies = new HashSet<>();
         for(Position neighbour : pos.getNeighbors()) {
             if(neighbour.isValid(size)) { // pozycja nie jest poza plansza
-                if(positionContainChain(neighbour) && getStoneAt(neighbour).getColor() == color)
-                    allies.add(getChainAt(neighbour));
+                if(positionContainChain(neighbour))
+                    if(getStoneAt(neighbour).getColor() == color)
+                        allies.add(getChainAt(neighbour));
             } 
         }
         return allies;
