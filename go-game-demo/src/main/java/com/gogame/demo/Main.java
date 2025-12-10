@@ -20,17 +20,26 @@ public class Main {
         
         // void getPlayerToMove()
         while(!game.isGameOver()) {
-            while(true) {
-                try {
-                    System.out.println("Ruch gracza " + (game.getCurrentTurn() == StoneColor.BLACK ? "czarnego" : "bialego"));
-                    int x = CLIController.getX(boardSize);
-                    int y = CLIController.getY(boardSize);
-                    game.makeMove(new Position(x - 1, y - 1));
-                    break;
-                } catch (Exception e) {
-                    System.out.println("Podany ruch jest nielegalny, sprobuj ponownie!");
+            
+            System.out.println("Ruch gracza " + (game.getCurrentTurn() == StoneColor.BLACK ? "czarnego" : "bialego"));
+            MoveType moveType = CLIController.getMoveType();
+            if(moveType == MoveType.NORMAL_MOVE) {
+                // getNormalMove()
+                while(true) {
+                    try {
+                        Position position = CLIController.getPositionFromPlayerInput(boardSize);
+                        game.makeMove(position);
+                        break;
+                    } catch (Exception e) {
+                        System.out.println("Podany ruch jest nielegalny, sprobuj ponownie!");
+                    }
                 }
+            } else if(moveType == MoveType.PASS) {
+                System.out.println("pass");
+            } else if(moveType == MoveType.RESIGN) {
+                System.out.println("resign");
             }
+
             board.updateTerritory();
             BoardPrinter.printBoard(board);                    
             }

@@ -8,7 +8,36 @@ public class CLIController {
 
     private static final Scanner scanner = new Scanner(System.in);
 
-    public static int getX(int boardSize) {
+    public static MoveType getMoveType() {
+        int choice = 0;
+        printMenu();
+        while(true) {
+            try {
+                choice = scanner.nextInt();
+                if(choice != 1 && choice != 2 && choice != 3)
+                    throw new IllegalArgumentException();
+                break;                    
+            } catch (Exception e) {
+                scanner.nextLine();
+                System.out.print("Podaj poprawny argument: ");
+            }
+        }
+        if(choice == 1) {
+            return MoveType.NORMAL_MOVE;
+        } else if(choice == 2) {
+            return MoveType.PASS;
+        } else if(choice == 3) {
+            return MoveType.PASS; 
+        } else {
+            return null;
+        }       
+    }
+
+    public static Position getPositionFromPlayerInput(int boardSize) {
+        return new Position(getXFromPlayerInput(boardSize) - 1, getYFromPlayerInput(boardSize) - 1);
+    }
+
+    public static int getXFromPlayerInput(int boardSize) {
         int x;
         System.out.print("Podaj x: "); 
         while(true) {
@@ -25,7 +54,7 @@ public class CLIController {
         return x;
     }
 
-    public static int getY(int boardSize) {
+    public static int getYFromPlayerInput(int boardSize) {
         int y;
         System.out.print("Podaj y: "); 
         while(true) {
@@ -40,5 +69,13 @@ public class CLIController {
             }
         }
         return y;
+    }
+
+    public static void printMenu() {
+        System.out.print("Jaka akcje chcesz podjac?\n" 
+                           + "1 - postaw kamien\n" 
+                           + "2 - spasuj\n" 
+                           + "3 - poddaj sie\n"
+                           + "Wpisz odpowiednia cyfre: ");
     }
 }
