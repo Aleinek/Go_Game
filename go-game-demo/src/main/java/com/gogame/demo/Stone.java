@@ -1,5 +1,6 @@
 package com.gogame.demo;
 
+
 public class Stone {
     private final Position position;
     private final StoneColor color;
@@ -17,5 +18,3 @@ public class Stone {
         return color;
     }
 }
-    
-    

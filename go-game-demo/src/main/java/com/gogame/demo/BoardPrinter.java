@@ -22,8 +22,6 @@ public class BoardPrinter {
 
             for(int x = 0; x < boardSize; x++) { 
 
-
-
                 Stone currStone = grid[x][y];
                 if(currStone == null) {
                     if(y == 0) {

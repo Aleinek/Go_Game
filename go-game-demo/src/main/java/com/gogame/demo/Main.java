@@ -1,28 +1,43 @@
 package com.gogame.demo;
 
 import java.util.Random;
+import java.util.Scanner;
+
+import com.gogame.demo.InvalidMoveException.ErrorCode;
 
 public class Main {
     public static void main(String[] args) {
-        int boardSize = 19;
+        int boardSize = 9;
         int maxIdx = boardSize - 1;
-        // zainicjowac jakiegos boarda i napisac funkcje board printer
-        Board board = new Board(19);
-        // polozmy sobie teraz losowo po 50 kamieni
+        
+        Board board = new Board(boardSize);
         Random random = new Random();
-        // biale
-        for(int i = 0; i < 50; i++) {
-            int x = random.nextInt(boardSize);
-            int y = random.nextInt(boardSize);
-            board.placeStone(new Position(x, y), StoneColor.WHITE);
-        }
-        // czarne
-        for(int i = 0; i < 50; i++) {
-            int x = random.nextInt(boardSize);
-            int y = random.nextInt(boardSize);
-            board.placeStone(new Position(x, y), StoneColor.BLACK);
-        }
+        Player blackPlayer = new Player(null, "czarny");
+        Player whitePlayer = new Player(null, "bialy");
+        Game game = new Game(blackPlayer, whitePlayer, boardSize, board);
 
         BoardPrinter.printBoard(board);
+        
+        // void getPlayerToMove()
+        while(!game.isGameOver()) {
+            while(true) {
+                try {
+                    System.out.println("Ruch gracza " + (game.getCurrentTurn() == StoneColor.BLACK ? "czarnego" : "bialego"));
+                    int x = CLIController.getX(boardSize);
+                    int y = CLIController.getY(boardSize);
+                    game.makeMove(new Position(x - 1, y - 1));
+                    break;
+                } catch (Exception e) {
+                    System.out.println("Podany ruch jest nielegalny, sprobuj ponownie!");
+                }
+            }
+            board.updateBoardAfterMove();
+            BoardPrinter.printBoard(board);                    
+            }
+    }
+    
+    public static void printGameStatus(Board board) {
+        BoardPrinter.printBoard(board);
+
     }
 }

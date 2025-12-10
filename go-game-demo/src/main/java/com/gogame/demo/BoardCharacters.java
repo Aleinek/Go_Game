@@ -22,21 +22,6 @@ public class BoardCharacters {
     public static final String BR_CORNER  = "┘"; // Bottom-Right
     
     // Kamienie (opcjonalnie)
-    public static final String STONE_BLACK = "●"; // Ze spacjami dla wyrównania
-    public static final String STONE_WHITE = "○"; 
-    public static final String EMPTY_FIELD = "   "; // Puste pole o tej samej szerokości co kamień
-
-    // Resetuje kolor do domyślnego (ważne, żeby nie zamalować całej konsoli!)
-    public static final String RESET = "\033[0m";
-
-    // Tła dla kamieni
-    public static final String BLACK_BG = "\033[40m"; // Czarne tło
-    public static final String WHITE_BG = "\033[47m"; // Białe tło
-    
-    // Opcjonalnie: Tło dla planszy (np. żółtawe/drewniane), 
-    // żeby czarny kamień był widoczny na czarnej konsoli!
-    public static final String YELLOW_BG = "\033[43m"; 
-    
-    // Kształt kamienia (kwadrat z tła)
-    public static final String STONE_SHAPE = "  "; // Dwie spacje
+    public static final String STONE_BLACK = "○"; // Ze spacjami dla wyrównania
+    public static final String STONE_WHITE = "●"; 
 }
