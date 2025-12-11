@@ -16,7 +16,7 @@ public class Game {
     public List<Move> moves;
     public int consecutivePasses;
 
-    public Game(Player blackPlayer, Player whitePlayer, int boardSize, Board board) {
+    public Game(Player blackPlayer, Player whitePlayer, Board board) {
         this.id = UUID.randomUUID();
         this.board = board;
         this.blackPlayer = blackPlayer;

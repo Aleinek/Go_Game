@@ -175,7 +175,7 @@ curl -X GET "http://localhost:8080/api/games/660e8400-e29b-41d4-a716-44665544000
 
 ### 3. Wykonanie ruchu
 ```bash
-curl -X POST "http://localhost:8080/api/games/660e8400-e29b-41d4-a716-446655440001/moves" \
+curl -X POST "http://localhost:8080/api/games/660e8400-e29b-41d4-a716-446655440001/move" \
   -H "Content-Type: application/json" \
   -H "X-Player-Id: 550e8400-e29b-41d4-a716-446655440000" \
   -d '{

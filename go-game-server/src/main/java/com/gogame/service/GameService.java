@@ -9,6 +9,7 @@ import com.gogame.dto.request.MakeMoveRequest;
 import com.gogame.dto.response.BoardResponse;
 import com.gogame.dto.response.GameResponse;
 import com.gogame.dto.response.MoveResponse;
+import com.gogame.dto.response.MovesListResponse;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
@@ -35,12 +36,25 @@ public class GameService {
     }
     
     public GameResponse createGame(UUID blackPlayerId, UUID whitePlayerId, int boardSize) {
-        Player blackPlayer = playerService.getPlayer(blackPlayerId);
-        Player whitePlayer = playerService.getPlayer(whitePlayerId);
+        // Validate that both players exist (throws PlayerNotFoundException if not)
+        Player existingBlackPlayer = playerService.getPlayer(blackPlayerId);
+        Player existingWhitePlayer = playerService.getPlayer(whitePlayerId);
+        
+        // Create game-specific player instances with stone colors
+        Player blackPlayer = new Player(
+            blackPlayerId, 
+            existingBlackPlayer.getNickname(), 
+            StoneColor.BLACK
+        );
+        Player whitePlayer = new Player(
+            whitePlayerId, 
+            existingWhitePlayer.getNickname(), 
+            StoneColor.WHITE
+        );
         
         Board board = new Board(boardSize, blackPlayer, whitePlayer);
         
-        Game game = new Game(blackPlayer, whitePlayer, boardSize, board);
+        Game game = new Game(blackPlayer, whitePlayer, board);
         
         Instant now = Instant.now();
         games.put(game.id, game);
@@ -54,6 +68,10 @@ public class GameService {
         );
         
         return buildGameResponse(game, "Game created successfully");
+    }
+    
+    public void validatePlayerExists(UUID playerId) {
+        playerService.getPlayer(playerId);
     }
     
     public GameResponse getGame(UUID gameId) {
@@ -113,6 +131,26 @@ public class GameService {
         );
 
         return buildMoveResponse(game, move, capturedPositions, "Move made successfully");
+    }
+
+    public MovesListResponse getMoves(UUID gameId) {
+        Game game = findGame(gameId);
+        
+        List<MovesListResponse.MoveInfo> moveInfos = game.moves.stream()
+            .map(move -> {
+                Position pos = move.getPosition();
+                String color = move.getPlayer().getStoneColor().toString();
+                return new MovesListResponse.MoveInfo(
+                    move.getMoveNumber(),
+                    pos != null ? pos.getX() : null,
+                    pos != null ? pos.getY() : null,
+                    color,
+                    Instant.now()
+                );
+            })
+            .collect(Collectors.toList());
+        
+        return new MovesListResponse(gameId, moveInfos, "Moves retrieved successfully");
     }
     
     public MoveResponse pass(UUID gameId, UUID playerId) {
@@ -261,13 +299,13 @@ public class GameService {
     
     private MoveResponse buildMoveResponse(Game game, Move move, List<Position> capturedPositions, String message) {
         Position pos = move.getPosition();
+        String color = move.getPlayer().getStoneColor().toString();
         
         MoveResponse.MoveInfo moveInfo = new MoveResponse.MoveInfo(
             move.getMoveNumber(),
             pos != null ? pos.getX() : -1,
             pos != null ? pos.getY() : -1,
-            move.getPlayer().getStoneColor() != null ? 
-                move.getPlayer().getStoneColor().toString() : "PASS",
+            color,
             capturedPositions.size(),
             Instant.now()
         );

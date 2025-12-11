@@ -5,6 +5,7 @@ import com.gogame.dto.request.MakeMoveRequest;
 import com.gogame.dto.response.BoardResponse;
 import com.gogame.dto.response.GameResponse;
 import com.gogame.dto.response.MoveResponse;
+import com.gogame.dto.response.MovesListResponse;
 import com.gogame.service.GameService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -31,6 +32,9 @@ public class GameController {
             @RequestHeader("X-Player-Id") UUID playerId,
             @RequestBody JoinGameRequest request) {
         
+        // Validate player exists before adding to queue
+        gameService.validatePlayerExists(playerId);
+        
         int boardSize = request.boardSize();
         
         UUID waitingPlayerId = waitingQueue.get(boardSize);
@@ -56,13 +60,22 @@ public class GameController {
         return ResponseEntity.ok(response);
     }
 
-    @PostMapping("/{id}/moves")
+    @PostMapping("/{id}/move")
     public ResponseEntity<MoveResponse> makeMove(
             @PathVariable UUID id,
             @RequestHeader("X-Player-Id") UUID playerId,
             @RequestBody MakeMoveRequest request) {
         
         MoveResponse response = gameService.makeMove(id, playerId, request);
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/{id}/moves")
+    // gets all moves made so far in the game by both players on {id}
+    public ResponseEntity<MovesListResponse> getMoves(
+            @PathVariable UUID id) {
+        
+        MovesListResponse response = gameService.getMoves(id);
         return ResponseEntity.ok(response);
     }
 
