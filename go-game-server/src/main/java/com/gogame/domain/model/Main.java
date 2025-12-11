@@ -1,9 +1,11 @@
-package com.gogame.demo;
+package com.gogame.domain.model;
 
 import java.util.Random;
 import java.util.Scanner;
 
-import com.gogame.demo.InvalidMoveException.ErrorCode;
+import com.gogame.domain.enums.MoveType;
+import com.gogame.domain.enums.StoneColor;
+
 
 public class Main {
     public static void main(String[] args) {

@@ -1,5 +1,6 @@
 package com.gogame.controller;
 
+import com.gogame.domain.enums.StoneColor;
 import com.gogame.domain.model.*;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -16,10 +17,10 @@ public class GameController {
     public ResponseEntity<GameResponse> createGame(
             @RequestBody CreateGameRequest request) {
         
-        Player blackPlayer = new Player(UUID.randomUUID(), request.blackPlayerName());
-        Player whitePlayer = new Player(UUID.randomUUID(), request.whitePlayerName());
+        Player blackPlayer = new Player(UUID.randomUUID(), request.blackPlayerName(), StoneColor.BLACK);
+        Player whitePlayer = new Player(UUID.randomUUID(), request.whitePlayerName(), StoneColor.WHITE);
         
-        Game game = new Game(blackPlayer, whitePlayer, request.boardSize());
+        Game game = new Game(blackPlayer, whitePlayer, request.boardSize(), null);
         String gameId = game.id.toString();
         games.put(gameId, game);
         

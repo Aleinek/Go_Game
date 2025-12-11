@@ -1,5 +1,4 @@
 package com.gogame.domain.exception;
-
 import java.util.UUID;
 
 /**

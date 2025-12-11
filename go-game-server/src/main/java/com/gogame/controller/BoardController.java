@@ -19,7 +19,7 @@ public class BoardController {
     @PostMapping("/create")
     public ResponseEntity<BoardResponse> createBoard(@RequestParam(defaultValue = "19") int size) {
         String boardId = UUID.randomUUID().toString();
-        Board board = new Board(size);
+        Board board = new Board(size, null, null);
         boards.put(boardId, board);
         
         return ResponseEntity.ok(new BoardResponse(

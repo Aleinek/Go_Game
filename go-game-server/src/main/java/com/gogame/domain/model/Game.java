@@ -16,9 +16,9 @@ public class Game {
     public List<Move> moves;
     public int consecutivePasses;
 
-    public Game(Player blackPlayer, Player whitePlayer, int boardSize) {
+    public Game(Player blackPlayer, Player whitePlayer, int boardSize, Board board) {
         this.id = UUID.randomUUID();
-        this.board = new Board(boardSize);
+        this.board = board;
         this.blackPlayer = blackPlayer;
         this.whitePlayer = whitePlayer;
         this.currentTurn = StoneColor.BLACK;
@@ -75,6 +75,10 @@ public class Game {
             return (getCurrentPlayer() == blackPlayer) ? whitePlayer : blackPlayer;
         }
         return null;
+    }
+
+    public StoneColor getCurrentTurn() {
+        return currentTurn;
     }
 
     void switchTurn() {
