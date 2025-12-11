@@ -29,4 +29,20 @@ public class Move {
     public boolean isPass() {
         return isPass;
     }
+    
+    public Player getPlayer() {
+        return player;
+    }
+    
+    public Position getPosition() {
+        return position;
+    }
+    
+    public int getMoveNumber() {
+        return moveNumber;
+    }
+    
+    public int getCapturedStones() {
+        return capturedStones;
+    }
 }

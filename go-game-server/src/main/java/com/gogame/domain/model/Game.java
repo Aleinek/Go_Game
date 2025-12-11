@@ -81,7 +81,7 @@ public class Game {
         return currentTurn;
     }
 
-    void switchTurn() {
+    public void switchTurn() {
         currentTurn = (currentTurn == StoneColor.BLACK) ? StoneColor.WHITE : StoneColor.BLACK;
     }
 

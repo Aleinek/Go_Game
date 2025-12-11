@@ -47,6 +47,12 @@ public class InvalidMoveException extends RuntimeException {
         this.errorCode = errorCode;
         this.position = position;
     }
+    
+    public InvalidMoveException(ErrorCode errorCode, String customMessage) {
+        super(customMessage);
+        this.errorCode = errorCode;
+        this.position = null;
+    }
 
     public InvalidMoveException(String message) {
         super(message);
