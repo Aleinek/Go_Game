@@ -20,6 +20,7 @@ public class GameController {
         Player blackPlayer = new Player(UUID.randomUUID(), request.blackPlayerName(), StoneColor.BLACK);
         Player whitePlayer = new Player(UUID.randomUUID(), request.whitePlayerName(), StoneColor.WHITE);
         
+        Board board = new Board(request.boardSize(), blackPlayer, whitePlayer);
         Game game = new Game(blackPlayer, whitePlayer, request.boardSize(), null);
         String gameId = game.id.toString();
         games.put(gameId, game);
