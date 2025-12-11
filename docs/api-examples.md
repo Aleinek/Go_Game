@@ -3,8 +3,7 @@
 ## Spis Treści
 1. [Player API - Zarządzanie graczami](#player-api)
 2. [Game API - Rozgrywki](#game-api)
-3. [WebSocket - Real-time komunikacja](#websocket)
-4. [Kody błędów](#error-codes)
+3. [Kody błędów](#error-codes)
 
 ---
 
@@ -19,7 +18,7 @@ curl -X POST "http://localhost:8080/api/players" \
   }'
 ```
 
-**Sukces (201 Created):**
+**Odpowiedź - Sukces (201 Created):**
 ```json
 {
   "id": "550e8400-e29b-41d4-a716-446655440000",
@@ -29,16 +28,7 @@ curl -X POST "http://localhost:8080/api/players" \
 }
 ```
 
-**Błąd - nickname zajęty (400):**
-```json
-{
-  "error": "VALIDATION_ERROR",
-  "message": "Nickname 'GoMaster2025' is already taken",
-  "timestamp": "2025-12-11T10:30:00Z"
-}
-```
-
-**Błąd - za krótki nickname (400):**
+**Odpowiedź - Błąd walidacji (400 Bad Request):**
 ```json
 {
   "error": "VALIDATION_ERROR",
@@ -52,7 +42,7 @@ curl -X POST "http://localhost:8080/api/players" \
 curl -X GET "http://localhost:8080/api/players/550e8400-e29b-41d4-a716-446655440000"
 ```
 
-**Odpowiedź (200 OK):**
+**Odpowiedź - Sukces (200 OK):**
 ```json
 {
   "id": "550e8400-e29b-41d4-a716-446655440000",
@@ -62,7 +52,7 @@ curl -X GET "http://localhost:8080/api/players/550e8400-e29b-41d4-a716-446655440
 }
 ```
 
-**Błąd - gracz nie istnieje (404):**
+**Odpowiedź - Błąd (404 Not Found):**
 ```json
 {
   "error": "PLAYER_NOT_FOUND",
@@ -85,7 +75,7 @@ curl -X POST "http://localhost:8080/api/games/join" \
   }'
 ```
 
-**Pierwszy gracz - oczekiwanie (202 Accepted):**
+**Odpowiedź - Pierwszy gracz czeka (202 Accepted):**
 ```json
 {
   "id": null,
@@ -102,7 +92,7 @@ curl -X POST "http://localhost:8080/api/games/join" \
 }
 ```
 
-**Drugi gracz - gra utworzona (201 Created):**
+**Odpowiedź - Drugi gracz, gra utworzona (201 Created):**
 ```json
 {
   "id": "660e8400-e29b-41d4-a716-446655440001",
@@ -127,7 +117,7 @@ curl -X POST "http://localhost:8080/api/games/join" \
 }
 ```
 
-**Błąd - nieprawidłowy rozmiar planszy (400):**
+**Odpowiedź - Błąd walidacji (400 Bad Request):**
 ```json
 {
   "error": "VALIDATION_ERROR",
@@ -141,7 +131,7 @@ curl -X POST "http://localhost:8080/api/games/join" \
 curl -X GET "http://localhost:8080/api/games/660e8400-e29b-41d4-a716-446655440001"
 ```
 
-**Odpowiedź (200 OK):**
+**Odpowiedź - Sukces (200 OK):**
 ```json
 {
   "id": "660e8400-e29b-41d4-a716-446655440001",
@@ -173,6 +163,15 @@ curl -X GET "http://localhost:8080/api/games/660e8400-e29b-41d4-a716-44665544000
 }
 ```
 
+**Odpowiedź - Błąd (404 Not Found):**
+```json
+{
+  "error": "GAME_NOT_FOUND",
+  "message": "Game with ID 660e8400-e29b-41d4-a716-446655440001 not found",
+  "timestamp": "2025-12-11T11:45:30Z"
+}
+```
+
 ### 3. Wykonanie ruchu
 ```bash
 curl -X POST "http://localhost:8080/api/games/660e8400-e29b-41d4-a716-446655440001/move" \
@@ -184,7 +183,7 @@ curl -X POST "http://localhost:8080/api/games/660e8400-e29b-41d4-a716-4466554400
   }'
 ```
 
-**Sukces (200 OK):**
+**Odpowiedź - Sukces (200 OK):**
 ```json
 {
   "success": true,
@@ -213,25 +212,25 @@ curl -X POST "http://localhost:8080/api/games/660e8400-e29b-41d4-a716-4466554400
 }
 ```
 
-**Błąd - pozycja zajęta (400):**
+**Odpowiedź - Błąd pozycja zajęta (400 Bad Request):**
 ```json
 {
   "error": "POSITION_OCCUPIED",
-  "message": "Position is already occupied at position (3, 3)",
+  "message": "Position is already occupied",
   "timestamp": "2025-12-11T11:46:15Z"
 }
 ```
 
-**Błąd - poza planszą (400):**
+**Odpowiedź - Błąd poza planszą (400 Bad Request):**
 ```json
 {
   "error": "OUT_OF_BOUNDS",
-  "message": "Position is outside the board boundaries at position (25, 3)",
+  "message": "Position is outside the board boundaries",
   "timestamp": "2025-12-11T11:46:15Z"
 }
 ```
 
-**Błąd - ruch samobójczy (400):**
+**Odpowiedź - Błąd ruch samobójczy (400 Bad Request):**
 ```json
 {
   "error": "SUICIDE_MOVE",
@@ -240,7 +239,7 @@ curl -X POST "http://localhost:8080/api/games/660e8400-e29b-41d4-a716-4466554400
 }
 ```
 
-**Błąd - nie twoja tura (400):**
+**Odpowiedź - Błąd nie twoja tura (400 Bad Request):**
 ```json
 {
   "error": "NOT_YOUR_TURN",
@@ -249,13 +248,49 @@ curl -X POST "http://localhost:8080/api/games/660e8400-e29b-41d4-a716-4466554400
 }
 ```
 
-### 4. Pas
+### 4. Pobranie listy ruchów
+```bash
+curl -X GET "http://localhost:8080/api/games/660e8400-e29b-41d4-a716-446655440001/moves"
+```
+
+**Odpowiedź - Sukces (200 OK):**
+```json
+{
+  "gameId": "660e8400-e29b-41d4-a716-446655440001",
+  "moves": [
+    {
+      "moveNumber": 1,
+      "x": 3,
+      "y": 3,
+      "color": "BLACK",
+      "timestamp": "2025-12-11T10:36:00Z"
+    },
+    {
+      "moveNumber": 2,
+      "x": 4,
+      "y": 4,
+      "color": "WHITE",
+      "timestamp": "2025-12-11T10:36:30Z"
+    },
+    {
+      "moveNumber": 3,
+      "x": null,
+      "y": null,
+      "color": "BLACK",
+      "timestamp": "2025-12-11T10:37:00Z"
+    }
+  ],
+  "message": "Moves retrieved successfully"
+}
+```
+
+### 5. Pas
 ```bash
 curl -X POST "http://localhost:8080/api/games/660e8400-e29b-41d4-a716-446655440001/pass" \
   -H "X-Player-Id: 550e8400-e29b-41d4-a716-446655440000"
 ```
 
-**Odpowiedź - pierwszy pas (200 OK):**
+**Odpowiedź - Pierwszy pas (200 OK):**
 ```json
 {
   "success": true,
@@ -263,7 +298,7 @@ curl -X POST "http://localhost:8080/api/games/660e8400-e29b-41d4-a716-4466554400
     "moveNumber": 44,
     "x": -1,
     "y": -1,
-    "color": "PASS",
+    "color": "BLACK",
     "capturedStones": 0,
     "timestamp": "2025-12-11T11:47:00Z"
   },
@@ -271,13 +306,16 @@ curl -X POST "http://localhost:8080/api/games/660e8400-e29b-41d4-a716-4466554400
   "currentTurn": "WHITE",
   "board": {
     "size": 19,
-    "stones": [...]
+    "stones": [
+      {"x": 3, "y": 3, "color": "BLACK"},
+      {"x": 4, "y": 4, "color": "WHITE"}
+    ]
   },
   "message": "Pass recorded. Opponent's turn."
 }
 ```
 
-**Odpowiedź - drugi pas z rzędu, koniec gry (200 OK):**
+**Odpowiedź - Drugi pas z rzędu, koniec gry (200 OK):**
 ```json
 {
   "success": true,
@@ -285,33 +323,36 @@ curl -X POST "http://localhost:8080/api/games/660e8400-e29b-41d4-a716-4466554400
     "moveNumber": 45,
     "x": -1,
     "y": -1,
-    "color": "PASS",
+    "color": "WHITE",
     "capturedStones": 0,
     "timestamp": "2025-12-11T11:47:30Z"
   },
   "capturedPositions": [],
-  "currentTurn": "BLACK",
+  "currentTurn": null,
   "board": {
     "size": 19,
-    "stones": [...]
+    "stones": [
+      {"x": 3, "y": 3, "color": "BLACK"},
+      {"x": 4, "y": 4, "color": "WHITE"}
+    ]
   },
   "message": "Game ended. Both players passed."
 }
 ```
 
-### 5. Poddanie gry
+### 6. Poddanie gry
 ```bash
 curl -X POST "http://localhost:8080/api/games/660e8400-e29b-41d4-a716-446655440001/resign" \
   -H "X-Player-Id: 550e8400-e29b-41d4-a716-446655440000"
 ```
 
-**Odpowiedź (200 OK):**
+**Odpowiedź - Sukces (200 OK):**
 ```json
 {
   "id": "660e8400-e29b-41d4-a716-446655440001",
   "status": "RESIGNED",
   "boardSize": 19,
-  "currentTurn": "WHITE",
+  "currentTurn": null,
   "blackPlayer": {
     "id": "550e8400-e29b-41d4-a716-446655440000",
     "nickname": "Player1",
@@ -323,19 +364,26 @@ curl -X POST "http://localhost:8080/api/games/660e8400-e29b-41d4-a716-4466554400
     "capturedStones": 1
   },
   "moveCount": 42,
-  "lastMove": null,
+  "lastMove": {
+    "moveNumber": 42,
+    "x": 15,
+    "y": 4,
+    "color": "BLACK",
+    "capturedStones": 0,
+    "timestamp": "2025-12-11T11:45:30Z"
+  },
   "createdAt": "2025-12-11T10:35:00Z",
   "updatedAt": "2025-12-11T11:48:00Z",
   "message": "Player1 resigned. Player2 wins!"
 }
 ```
 
-### 6. Pobranie stanu planszy
+### 7. Pobranie stanu planszy
 ```bash
 curl -X GET "http://localhost:8080/api/games/660e8400-e29b-41d4-a716-446655440001/board"
 ```
 
-**Odpowiedź (200 OK):**
+**Odpowiedź - Sukces (200 OK):**
 ```json
 {
   "gameId": "660e8400-e29b-41d4-a716-446655440001",
@@ -355,101 +403,7 @@ curl -X GET "http://localhost:8080/api/games/660e8400-e29b-41d4-a716-44665544000
 
 ---
 
-## WebSocket
-
-### Połączenie
-```javascript
-const socket = new SockJS('http://localhost:8080/ws');
-const stompClient = Stomp.over(socket);
-
-stompClient.connect({}, function(frame) {
-    console.log('Connected: ' + frame);
-    
-    // Subskrypcja do eventów gry dla konkretnego gracza
-    stompClient.subscribe('/user/' + playerId + '/queue/game', function(message) {
-        const event = JSON.parse(message.body);
-        handleGameEvent(event);
-    });
-});
-```
-
-### Event: GAME_STARTED
-Wysyłany do obu graczy po utworzeniu gry.
-
-```json
-{
-  "type": "GAME_STARTED",
-  "payload": {
-    "gameId": "660e8400-e29b-41d4-a716-446655440001",
-    "yourColor": "BLACK",
-    "opponent": {
-      "nickname": "Player2"
-    },
-    "boardSize": 19
-  },
-  "timestamp": "2025-12-11T10:35:00Z"
-}
-```
-
-### Event: OPPONENT_MOVED
-Wysyłany po ruchu przeciwnika.
-
-```json
-{
-  "type": "OPPONENT_MOVED",
-  "payload": {
-    "move": {
-      "moveNumber": 2,
-      "x": 4,
-      "y": 4,
-      "color": "WHITE"
-    },
-    "capturedPositions": [],
-    "currentTurn": "BLACK"
-  },
-  "timestamp": "2025-12-11T10:36:00Z"
-}
-```
-
-### Event: OPPONENT_PASSED
-Wysyłany po pasie przeciwnika.
-
-```json
-{
-  "type": "OPPONENT_PASSED",
-  "payload": {
-    "moveNumber": 5,
-    "consecutivePasses": 1,
-    "currentTurn": "BLACK"
-  },
-  "timestamp": "2025-12-11T10:37:00Z"
-}
-```
-
-### Event: GAME_ENDED
-Wysyłany po zakończeniu gry.
-
-```json
-{
-  "type": "GAME_ENDED",
-  "payload": {
-    "reason": "RESIGNATION",
-    "winner": "Player2",
-    "resignedBy": "Player1"
-  },
-  "timestamp": "2025-12-11T11:48:00Z"
-}
-```
-
-**Powody zakończenia:**
-- `RESIGNATION` - poddanie się
-- `TWO_PASSES` - dwa pasy z rzędu
-
----
-
-## Error Codes
-
-### Kody błędów API
+## Kody błędów
 
 | Kod | HTTP Status | Opis |
 |-----|-------------|------|
@@ -473,13 +427,13 @@ Wysyłany po zakończeniu gry.
 curl -X POST "http://localhost:8080/api/players" \
   -H "Content-Type: application/json" \
   -d '{"nickname": "Alice"}'
-# Zapisz ID i token z odpowiedzi: player1Id, player1Token
+# Zapisz ID z odpowiedzi jako player1Id
 
 # Gracz 2
 curl -X POST "http://localhost:8080/api/players" \
   -H "Content-Type: application/json" \
   -d '{"nickname": "Bob"}'
-# Zapisz ID i token z odpowiedzi: player2Id, player2Token
+# Zapisz ID z odpowiedzi jako player2Id
 ```
 
 ### 2. Dołączenie do gry
@@ -489,29 +443,35 @@ curl -X POST "http://localhost:8080/api/games/join" \
   -H "Content-Type: application/json" \
   -H "X-Player-Id: {player1Id}" \
   -d '{"boardSize": 9}'
-# Odpowiedź: WAITING
+# Otrzyma status: WAITING
 
 # Gracz 2 dołącza - gra się rozpoczyna
 curl -X POST "http://localhost:8080/api/games/join" \
   -H "Content-Type: application/json" \
   -H "X-Player-Id: {player2Id}" \
   -d '{"boardSize": 9}'
-# Odpowiedź: Gra utworzona, zapisz gameId
+# Zapisz gameId z odpowiedzi
 ```
 
 ### 3. Rozgrywka
 ```bash
 # Gracz 1 (BLACK) wykonuje ruch
-curl -X POST "http://localhost:8080/api/games/{gameId}/moves" \
+curl -X POST "http://localhost:8080/api/games/{gameId}/move" \
   -H "Content-Type: application/json" \
   -H "X-Player-Id: {player1Id}" \
   -d '{"x": 2, "y": 2}'
 
 # Gracz 2 (WHITE) wykonuje ruch
-curl -X POST "http://localhost:8080/api/games/{gameId}/moves" \
+curl -X POST "http://localhost:8080/api/games/{gameId}/move" \
   -H "Content-Type: application/json" \
   -H "X-Player-Id: {player2Id}" \
   -d '{"x": 2, "y": 3}'
+
+# Sprawdzenie stanu gry
+curl -X GET "http://localhost:8080/api/games/{gameId}"
+
+# Sprawdzenie planszy
+curl -X GET "http://localhost:8080/api/games/{gameId}/board"
 
 # Gracz 1 pasuje
 curl -X POST "http://localhost:8080/api/games/{gameId}/pass" \
@@ -525,45 +485,4 @@ curl -X POST "http://localhost:8080/api/games/{gameId}/pass" \
 ### 4. Sprawdzenie wyniku
 ```bash
 curl -X GET "http://localhost:8080/api/games/{gameId}"
-```
-
----
-
-## Testowanie w Postman
-
-### Kolekcja zmiennych środowiskowych
-```json
-{
-  "baseUrl": "http://localhost:8080",
-  "player1Id": "",
-  "player1Token": "",
-  "player2Id": "",
-  "player2Token": "",
-  "gameId": ""
-}
-```
-
-### Pre-request Scripts
-Dla żądań wymagających X-Player-Id:
-```javascript
-pm.request.headers.add({
-    key: 'X-Player-Id',
-    value: pm.environment.get('player1Id')
-});
-```
-
-### Tests (dla zapisywania ID)
-Po utworzeniu gracza:
-```javascript
-const response = pm.response.json();
-pm.environment.set('player1Id', response.id);
-pm.environment.set('player1Token', response.token);
-```
-
-Po utworzeniu gry:
-```javascript
-const response = pm.response.json();
-if (response.id) {
-    pm.environment.set('gameId', response.id);
-}
 ```
