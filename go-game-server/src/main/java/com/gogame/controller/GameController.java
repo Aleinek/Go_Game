@@ -46,8 +46,11 @@ public class GameController {
             return ResponseEntity.status(HttpStatus.CREATED).body(response);
         } else {
             waitingQueue.put(boardSize, playerId);
+
+            UUID temporaryGameId = UUID.randomUUID();
+
             GameResponse response = new GameResponse(
-                null, "WAITING", boardSize, null, null, null, 0, null, null, null,
+                temporaryGameId, "WAITING", boardSize, null, null, null, 0, null, null, null,
                 "Waiting for opponent..."
             );
             return ResponseEntity.status(HttpStatus.ACCEPTED).body(response);
