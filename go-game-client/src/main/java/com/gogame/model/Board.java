@@ -2,7 +2,7 @@ package com.gogame.model;
 
 import java.util.List;
 
-import com.gogame.APIController;
+import com.gogame.controller.APIController;
 import com.gogame.dto.BoardResponseDTO;
 import com.gogame.dto.StoneDTO;
 

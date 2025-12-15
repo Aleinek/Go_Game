@@ -4,6 +4,9 @@ import java.util.UUID;
 
 import com.gogame.model.Board;
 import com.gogame.model.MoveType;
+import com.gogame.printer.BoardPrinter;
+import com.gogame.controller.APIController;
+import com.gogame.controller.CLIController;
 import com.gogame.dto.*;
 
 // http://gogame.adamkulwicki.pl:8080/

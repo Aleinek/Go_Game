@@ -1,4 +1,4 @@
-package com.gogame;
+package com.gogame.controller;
 
 import java.util.Scanner;
 

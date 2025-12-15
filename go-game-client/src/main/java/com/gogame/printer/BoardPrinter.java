@@ -1,4 +1,4 @@
-package com.gogame;
+package com.gogame.printer;
 
 import com.gogame.model.Board;
 import com.gogame.model.Stone;

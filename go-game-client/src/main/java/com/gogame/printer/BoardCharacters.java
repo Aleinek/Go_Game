@@ -1,4 +1,4 @@
-package com.gogame;
+package com.gogame.printer;
 
 public class BoardCharacters {
     // Linie

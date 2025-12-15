@@ -1,4 +1,4 @@
-package com.gogame;
+package com.gogame.controller;
 
 import java.io.IOException;
 import java.net.URI;
@@ -18,7 +18,7 @@ public class APIController {
     private final HttpClient client;
     private final ObjectMapper mapper;
 
-    APIController(String serverURL) {
+    public APIController(String serverURL) {
         this.serverURL = serverURL;
         this.client = HttpClient.newHttpClient();
         this.mapper = new ObjectMapper();
