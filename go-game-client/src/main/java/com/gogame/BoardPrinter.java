@@ -7,16 +7,14 @@ import com.gogame.model.Territory;
 
 public class BoardPrinter {
 
-    public static void printBoard(Board board) {
+    public static void printBoard(Board board, int whitePrisoners, int blackPrisoners) {
         int boardSize = board.getSize();
         int maxIdx = boardSize - 1;
         Stone[][] grid = board.getGrid();
 
-        Territory territory = board.getTerritory();
-        int whitePrisoners = board.getBlackPlayer().getCapturedStones();
-        int blackPrisoners = board.getWhitePlayer().getCapturedStones();
+        // Territory territory = board.getTerritory();
 
-        System.out.println("\nTerytorium czarne: " + territory.getBlackTerritory() + ", Terytorium biale: " + territory.getWhiteTerritory());
+        // System.out.println("\nTerytorium czarne: " + territory.getBlackTerritory() + ", Terytorium biale: " + territory.getWhiteTerritory());
         System.out.println("Biali jency: " + whitePrisoners + ", Czarni jency: " + blackPrisoners);
 
         for(int y = 0; y < boardSize; y++) { 

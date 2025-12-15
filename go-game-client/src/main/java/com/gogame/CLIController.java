@@ -2,10 +2,8 @@ package com.gogame;
 
 import java.util.Scanner;
 
-import com.gogame.model.InvalidMoveException;
-import com.gogame.model.InvalidMoveException.ErrorCode;
+import com.gogame.dto.GameResponse;
 import com.gogame.model.MoveType;
-import com.gogame.model.Position;
 
 
 public class CLIController {
@@ -31,14 +29,10 @@ public class CLIController {
         } else if(choice == 2) {
             return MoveType.PASS;
         } else if(choice == 3) {
-            return MoveType.PASS; 
+            return MoveType.RESIGN; 
         } else {
             return null;
         }       
-    }
-
-    public static Position getPositionFromPlayerInput(int boardSize) {
-        return new Position(getXFromPlayerInput(boardSize) - 1, getYFromPlayerInput(boardSize) - 1);
     }
 
     public static int getXFromPlayerInput(int boardSize) {
@@ -48,14 +42,14 @@ public class CLIController {
             try {
                 x = scanner.nextInt();
                 if(x < 0 || x > boardSize)
-                    throw new InvalidMoveException(ErrorCode.OUT_OF_BOUNDS);
+                    throw new IllegalArgumentException();
                 break;                    
             } catch (Exception e) {
                 scanner.nextLine();
                 System.out.print("Podaj poprawny x: ");
             }
         }
-        return x;
+        return x - 1;
     }
 
     public static int getYFromPlayerInput(int boardSize) {
@@ -65,14 +59,14 @@ public class CLIController {
             try {
                 y = scanner.nextInt();
                 if(y < 0 || y > boardSize)
-                    throw new InvalidMoveException(ErrorCode.OUT_OF_BOUNDS);
+                    throw new IllegalArgumentException();
                 break;                    
             } catch (Exception e) {
                 scanner.nextLine();
                 System.out.print("Podaj poprawny y: ");
             }
         }
-        return y;
+        return y - 1;
     }
 
     public static void printMenu() {

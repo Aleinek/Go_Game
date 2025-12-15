@@ -5,34 +5,12 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.util.List;
 import java.util.UUID;
 
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
-
-// rekordy do utworzenia gracza
-record PlayerRequest(String nickname) {}
-record PlayerResponse(UUID id, String nickname, String token, String createdAt) {}
-
-// rekordy pozwalajace dolaczyc do gry
-record JoinGameRequest(int boardSize) {}
-record GameResponse(
-    UUID id, 
-    String status, 
-    int boardSize, 
-    String currentTurn, 
-    Integer moveCount,
-    GamePlayer blackPlayer, 
-    GamePlayer whitePlayer, 
-    String message,
-    GameMove lastMove
-) {}
-record GameMove(int x, int y, String color) {}
-
-// rekord z atrybutami gracza
-record GamePlayer(UUID id, String nickname, int capturedStones) {}
-// rekord ktory przechowuje informacje dla gracza czekajacego na kolejnego gracza w kolejce
-record WaitingStatus(String status, UUID gameId, String message) {}
+import com.gogame.dto.*;
 
 public class APIController {
 
@@ -134,8 +112,82 @@ public class APIController {
             }
 
         } catch (IOException | InterruptedException e) {
-            throw new RuntimeException("Bladd sieci podczas pobierania gry", e);
+            throw new RuntimeException("Blad sieci podczas pobierania gry", e);
         }
     }
-    
+
+    public MoveResponse makeMove(UUID gameId, UUID playerId, int x, int y) throws IOException, InterruptedException {
+        MakeMoveRequest requestBody = new MakeMoveRequest(x, y);
+        String jsonToSend = mapper.writeValueAsString(requestBody);
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(serverURL + "/api/games/" + gameId + "/move")) 
+                .header("Content-Type", "application/json")
+                .header("X-Player-Id", playerId.toString()) 
+                .POST(HttpRequest.BodyPublishers.ofString(jsonToSend))
+                .build();
+        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+        if (response.statusCode() == 200) {
+            return mapper.readValue(response.body(), MoveResponse.class);
+        } else {
+            throw new RuntimeException("Blad wykonywania ruchu! Kod: " + response.statusCode() + ", Treść: " + response.body());
+        }
+    }
+
+    public MoveResponse pass(UUID gameId, UUID playerId) throws IOException, InterruptedException {
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(serverURL + "/api/games/" + gameId + "/pass"))
+                .header("Content-Type", "application/json")
+                .header("X-Player-Id", playerId.toString())
+                .POST(HttpRequest.BodyPublishers.noBody()) // Pusty POST
+                .build();
+        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+        if (response.statusCode() == 200) {
+            return mapper.readValue(response.body(), MoveResponse.class);
+        } else {
+            throw new RuntimeException("Blad podczas pasowania! Kod: " + response.statusCode() + ", Treść: " + response.body());
+        }
+    }
+
+    public GameResponse resign(UUID gameId, UUID playerId) {
+        try {
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(serverURL + "/api/games/" + gameId + "/resign"))
+                    .header("Content-Type", "application/json")
+                    .header("X-Player-Id", playerId.toString())
+                    .POST(HttpRequest.BodyPublishers.noBody()) 
+                    .build();
+
+            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+
+            if (response.statusCode() == 200) {
+                return mapper.readValue(response.body(), GameResponse.class);
+            } else {
+                throw new RuntimeException("Blad podczas poddawania gry! Kod: " + response.statusCode() + ", Treść: " + response.body());
+            }
+
+        } catch (IOException | InterruptedException e) {
+            throw new RuntimeException("Blad sieci podczas poddawania gry", e);
+        }
+    }
+
+    public BoardResponseDTO fetchBoard(UUID gameId) {
+        try {
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(serverURL + "/api/games/" + gameId + "/board"))
+                    .header("Content-Type", "application/json")
+                    .GET()
+                    .build();
+
+            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+
+            if (response.statusCode() == 200) {
+                return mapper.readValue(response.body(), BoardResponseDTO.class);
+            } else {
+                throw new RuntimeException("Błąd pobierania planszy! Kod: " + response.statusCode() + ", Treść: " + response.body());
+            }
+
+        } catch (IOException | InterruptedException e) {
+            throw new RuntimeException("Błąd sieci podczas pobierania planszy", e);
+        }
+    }
 }
