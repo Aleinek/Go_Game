@@ -106,6 +106,7 @@ public class Main {
                         GameResponse resignResponse = apiController.resign(gameId, playerId);
                         break;
                     }
+                    gameResponse = apiController.fetchGameStatus(gameId); // fetchujemy zeby jesli wystapilo bicie to w gameResponse miec ilosc zbitych kamieni
                     boardResponseDTO = apiController.fetchBoard(gameId);
                     // po wykonaniu ruchu rysujemy plansze
                     BoardPrinter.printBoard(new Board(boardResponseDTO), 
