@@ -44,14 +44,6 @@ public class BoardService {
         
         capturedPositions.remove(position);
         
-        int capturedCount = capturedPositions.size();
-        if (capturedCount > 0) {
-            if (color == StoneColor.BLACK) {
-                blackPlayer.addCaptured(capturedCount);
-            } else {
-                whitePlayer.addCaptured(capturedCount);
-            }
-        }
         
         return new ArrayList<>(capturedPositions);
     }
