@@ -22,10 +22,13 @@ public class GameController {
     private final GameService gameService;
 
     private final Map<Integer, UUID> waitingQueue = new HashMap<>();
+    private final Map<UUID, WaitingGame> waitingGames = new HashMap<>();
     
     public GameController(GameService gameService) {
         this.gameService = gameService;
     }
+
+    private record WaitingGame(UUID playerId, int boardSize, UUID actualGameId) {}
 
     @PostMapping("/join")
     public ResponseEntity<GameResponse> joinGame(
@@ -43,18 +46,52 @@ public class GameController {
             waitingQueue.remove(boardSize);
             
             GameResponse response = gameService.createGame(waitingPlayerId, playerId, boardSize);
+            
+            // podmianka waitingGame na GameId żeby można było sprawdzić status oczekiwania
+            for (Map.Entry<UUID, WaitingGame> entry : waitingGames.entrySet()) {
+                if (entry.getValue().playerId().equals(waitingPlayerId)) {
+                    UUID waitingGameId = entry.getKey();
+                    waitingGames.put(waitingGameId, 
+                        new WaitingGame(waitingPlayerId, boardSize, response.id()));
+                    break;
+                }
+            }
+            
             return ResponseEntity.status(HttpStatus.CREATED).body(response);
         } else {
+            UUID waitingGameId = UUID.randomUUID();
             waitingQueue.put(boardSize, playerId);
-
-            UUID temporaryGameId = UUID.randomUUID();
-
+            waitingGames.put(waitingGameId, new WaitingGame(playerId, boardSize, null));
+            
             GameResponse response = new GameResponse(
-                temporaryGameId, "WAITING", boardSize, null, null, null, 0, null, null, null,
+                waitingGameId, "WAITING", boardSize, null, null, null, 0, null, null, null,
                 "Waiting for opponent..."
             );
             return ResponseEntity.status(HttpStatus.ACCEPTED).body(response);
         }
+    }
+
+    @GetMapping("/waiting/{waitingGameId}")
+    public ResponseEntity<Map<String, Object>> checkWaitingStatus(@PathVariable UUID waitingGameId) {
+        WaitingGame waitingGame = waitingGames.get(waitingGameId);
+        
+        if (waitingGame == null) {
+            return ResponseEntity.notFound().build();
+        }
+        
+        Map<String, Object> response = new HashMap<>();
+        if (waitingGame.actualGameId() != null) {
+            // response po starcie gry
+            response.put("status", "MATCHED");
+            response.put("gameId", waitingGame.actualGameId());
+            waitingGames.remove(waitingGameId);
+        } else {
+            // response jak nie znalazło gracza
+            response.put("status", "WAITING");
+            response.put("message", "Waiting for opponent...");
+        }
+        
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/{id}")
@@ -75,9 +112,7 @@ public class GameController {
 
     @GetMapping("/{id}/moves")
     // gets all moves made so far in the game by both players on {id}
-    public ResponseEntity<MovesListResponse> getMoves(
-            @PathVariable UUID id) {
-        
+    public ResponseEntity<MovesListResponse> getMoves(@PathVariable UUID id) {
         MovesListResponse response = gameService.getMoves(id);
         return ResponseEntity.ok(response);
     }
