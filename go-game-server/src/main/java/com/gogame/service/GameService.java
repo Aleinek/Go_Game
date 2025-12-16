@@ -234,11 +234,9 @@ public class GameService {
     
     public BoardResponse getBoard(UUID gameId) {
         Game game = findGame(gameId);
-        Territory territory = new Territory(game.board.getSize());
         return boardService.getBoardResponse(
             gameId,
             game.board,
-            territory,
             game.moves.size(),
             game.blackPlayer.getCapturedStones(),
             game.whitePlayer.getCapturedStones()
