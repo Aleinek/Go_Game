@@ -9,5 +9,8 @@ public record BoardResponseDTO(
     int moveNumber,
     List<StoneDTO> stones, 
     int blackCaptured,
-    int whiteCaptured
+    int whiteCaptured,
+    int whiteTerritory,
+    int blackTerritory,
+    int neutralTerritory
 ) {}

@@ -82,7 +82,9 @@ public class Main {
                     BoardResponseDTO boardResponseDTO = apiController.fetchBoard(gameId);
                     BoardPrinter.printBoard(new Board(boardResponseDTO), 
                         gameResponse.blackPlayer().capturedStones(),
-                        gameResponse.whitePlayer().capturedStones());
+                        gameResponse.whitePlayer().capturedStones(),
+                        boardResponseDTO.whiteTerritory(),
+                        boardResponseDTO.blackTerritory());
 
                     MoveType moveType = CLIController.getMoveType();
 
@@ -115,7 +117,9 @@ public class Main {
                     // po wykonaniu ruchu rysujemy plansze
                     BoardPrinter.printBoard(new Board(boardResponseDTO), 
                                             gameResponse.blackPlayer().capturedStones(),
-                                            gameResponse.whitePlayer().capturedStones());
+                                            gameResponse.whitePlayer().capturedStones(),
+                                            boardResponseDTO.whiteTerritory(),
+                                            boardResponseDTO.blackTerritory());
                     System.out.print("Czekam na ruch rywala...");
 
                 } else {
