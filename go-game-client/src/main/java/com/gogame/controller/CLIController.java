@@ -2,7 +2,9 @@ package com.gogame.controller;
 
 import java.util.Scanner;
 
+import com.gogame.dto.GamePlayer;
 import com.gogame.dto.GameResponse;
+import com.gogame.dto.PlayerResponse;
 import com.gogame.model.MoveType;
 
 
@@ -116,5 +118,13 @@ public class CLIController {
         System.out.println("Id gry: " + game.id());
         System.out.println("Gracz czarny: " + game.blackPlayer().nickname());
         System.out.println("Gracz bialy: " + game.whitePlayer().nickname());
+    }
+
+    public static void printResignMessage(GamePlayer enemyPlayer) {
+        System.out.println("Poddales sie! Wygral gracz " + enemyPlayer.nickname());
+    }
+
+    public static void printOpponentResignedMessage(GamePlayer enemyPlayer) {
+        System.out.println("Gracz " + enemyPlayer.nickname() + " sie poddal! Wygrales!");
     }
 }

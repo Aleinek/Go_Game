@@ -67,9 +67,11 @@ public class Main {
         try {
             GameResponse gameResponse = apiController.fetchGameStatus(gameId);
             String myColor = (playerName.equals(gameResponse.blackPlayer().nickname()) ? "BLACK" : "WHITE");
+            boolean passed = false;
 
             while ("IN_PROGRESS".equals(gameResponse.status())) {
                 
+                // boolean opponentPassed = (gameResponse.lastMove().x() == null && gameResponse.lastMove().y() == null && gameResponse.moveCount() > 0 ? true : false); 
                 boolean itIsMyTurn = (myColor.equals(gameResponse.currentTurn()) ? true : false);
                 if (itIsMyTurn) {
                     // przed wykonaniem ruchu rysujemy plansze 
@@ -79,8 +81,8 @@ public class Main {
                         System.out.println("Rozpoczynasz gre!");
                     BoardResponseDTO boardResponseDTO = apiController.fetchBoard(gameId);
                     BoardPrinter.printBoard(new Board(boardResponseDTO), 
-                    gameResponse.blackPlayer().capturedStones(),
-                    gameResponse.whitePlayer().capturedStones());
+                        gameResponse.blackPlayer().capturedStones(),
+                        gameResponse.whitePlayer().capturedStones());
 
                     MoveType moveType = CLIController.getMoveType();
 
@@ -101,10 +103,12 @@ public class Main {
                             }
                         }
                     } else if(moveType == MoveType.PASS) {
+                        passed = true;
                         MoveResponse moveResponse = apiController.pass(gameId, playerId);
                     } else { //moveType == MoveType.RESIGN
-                        GameResponse resignResponse = apiController.resign(gameId, playerId);
-                        break;
+                        CLIController.printResignMessage((myColor.equals("BLACK") ? gameResponse.whitePlayer() : gameResponse.blackPlayer()));
+                        GameResponse resignResponse = apiController.resign(gameId, playerId);   
+                        return;
                     }
                     gameResponse = apiController.fetchGameStatus(gameId); // fetchujemy zeby jesli wystapilo bicie to w gameResponse miec ilosc zbitych kamieni
                     boardResponseDTO = apiController.fetchBoard(gameId);
@@ -122,6 +126,9 @@ public class Main {
                     }
                 }      
                 gameResponse = apiController.fetchGameStatus(gameId);
+                boolean opponentResigned = (gameResponse.status().equals("RESIGNED") ? true : false);
+                if(opponentResigned)
+                    CLIController.printOpponentResignedMessage((myColor.equals("BLACK") ? gameResponse.whitePlayer() : gameResponse.blackPlayer()));
             }        
         } catch (Exception e) {
             System.out.println("Wystapil blad!");
