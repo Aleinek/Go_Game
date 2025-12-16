@@ -10,7 +10,7 @@ import java.util.*;
 @Service
 public class BoardService {
     
-    public BoardResponse getBoardResponse(UUID gameId, Board board, int moveNumber, 
+    public BoardResponse getBoardResponse(UUID gameId, Board board,Territory territory, int moveNumber, 
                                          int blackCaptured, int whiteCaptured) {
         List<BoardResponse.StoneInfo> stones = new ArrayList<>();
         
@@ -24,7 +24,8 @@ public class BoardService {
             }
         }
         
-        return new BoardResponse(gameId, board.getSize(), moveNumber, stones, blackCaptured, whiteCaptured);
+        return new BoardResponse(gameId, board.getSize(), moveNumber, stones, blackCaptured, whiteCaptured,
+                                 territory.getWhiteTerritory(), territory.getBlackTerritory(), territory.getNeutralTerritory());
     }
     
     public void validateMove(Board board, Position position, StoneColor color) {

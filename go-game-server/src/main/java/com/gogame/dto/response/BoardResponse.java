@@ -9,7 +9,10 @@ public record BoardResponse(
     int moveNumber,
     List<StoneInfo> stones,
     int blackCaptured,
-    int whiteCaptured
+    int whiteCaptured,
+    int whiteTerritory,
+    int blackTerritory,
+    int neutralTerritory
 ) {
     public record StoneInfo(
         int x,
