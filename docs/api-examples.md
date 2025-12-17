@@ -24,7 +24,7 @@ curl -X POST "http://localhost:8080/api/players" \
   "id": "550e8400-e29b-41d4-a716-446655440000",
   "nickname": "GoMaster2025",
   "token": "token_550e8400-e29b-41d4-a716-446655440000_a1b2c3d4",
-  "createdAt": "2025-12-11T10:30:00Z"
+  "createdAt": "2025-12-17T10:30:00Z"
 }
 ```
 
@@ -32,8 +32,7 @@ curl -X POST "http://localhost:8080/api/players" \
 ```json
 {
   "error": "VALIDATION_ERROR",
-  "message": "Nickname must be between 3 and 20 characters",
-  "timestamp": "2025-12-11T10:30:00Z"
+  "message": "Nickname must be between 3 and 20 characters"
 }
 ```
 
@@ -48,7 +47,7 @@ curl -X GET "http://localhost:8080/api/players/550e8400-e29b-41d4-a716-446655440
   "id": "550e8400-e29b-41d4-a716-446655440000",
   "nickname": "GoMaster2025",
   "token": "token_550e8400-e29b-41d4-a716-446655440000_a1b2c3d4",
-  "createdAt": "2025-12-11T10:30:00Z"
+  "createdAt": "2025-12-17T10:30:00Z"
 }
 ```
 
@@ -56,8 +55,7 @@ curl -X GET "http://localhost:8080/api/players/550e8400-e29b-41d4-a716-446655440
 ```json
 {
   "error": "PLAYER_NOT_FOUND",
-  "message": "Player with ID 550e8400-e29b-41d4-a716-446655440000 not found",
-  "timestamp": "2025-12-11T10:30:00Z"
+  "message": "Player with ID 550e8400-e29b-41d4-a716-446655440000 not found"
 }
 ```
 
@@ -78,7 +76,7 @@ curl -X POST "http://localhost:8080/api/games/join" \
 **Odpowiedź - Pierwszy gracz czeka (202 Accepted):**
 ```json
 {
-  "id": null,
+  "id": "waiting-game-uuid",
   "status": "WAITING",
   "boardSize": 19,
   "currentTurn": null,
@@ -111,8 +109,8 @@ curl -X POST "http://localhost:8080/api/games/join" \
   },
   "moveCount": 0,
   "lastMove": null,
-  "createdAt": "2025-12-11T10:35:00Z",
-  "updatedAt": "2025-12-11T10:35:00Z",
+  "createdAt": "2025-12-17T10:35:00Z",
+  "updatedAt": "2025-12-17T10:35:00Z",
   "message": "Game created successfully"
 }
 ```
@@ -121,12 +119,32 @@ curl -X POST "http://localhost:8080/api/games/join" \
 ```json
 {
   "error": "VALIDATION_ERROR",
-  "message": "Board size must be 9, 13, or 19",
-  "timestamp": "2025-12-11T10:35:00Z"
+  "message": "Board size must be 9, 13, or 19"
 }
 ```
 
-### 2. Pobranie stanu gry
+### 2. Sprawdzenie statusu oczekiwania
+```bash
+curl -X GET "http://localhost:8080/api/games/waiting/waiting-game-uuid"
+```
+
+**Odpowiedź - Wciąż czeka (200 OK):**
+```json
+{
+  "status": "WAITING",
+  "message": "Waiting for opponent..."
+}
+```
+
+**Odpowiedź - Gra znaleziona (200 OK):**
+```json
+{
+  "status": "MATCHED",
+  "gameId": "660e8400-e29b-41d4-a716-446655440001"
+}
+```
+
+### 3. Pobranie stanu gry
 ```bash
 curl -X GET "http://localhost:8080/api/games/660e8400-e29b-41d4-a716-446655440001"
 ```
@@ -155,10 +173,10 @@ curl -X GET "http://localhost:8080/api/games/660e8400-e29b-41d4-a716-44665544000
     "y": 4,
     "color": "BLACK",
     "capturedStones": 0,
-    "timestamp": "2025-12-11T11:45:30Z"
+    "timestamp": "2025-12-17T11:45:30Z"
   },
-  "createdAt": "2025-12-11T10:35:00Z",
-  "updatedAt": "2025-12-11T11:45:30Z",
+  "createdAt": "2025-12-17T10:35:00Z",
+  "updatedAt": "2025-12-17T11:45:30Z",
   "message": "Game state retrieved"
 }
 ```
@@ -167,12 +185,11 @@ curl -X GET "http://localhost:8080/api/games/660e8400-e29b-41d4-a716-44665544000
 ```json
 {
   "error": "GAME_NOT_FOUND",
-  "message": "Game with ID 660e8400-e29b-41d4-a716-446655440001 not found",
-  "timestamp": "2025-12-11T11:45:30Z"
+  "message": "Game with ID 660e8400-e29b-41d4-a716-446655440001 not found"
 }
 ```
 
-### 3. Wykonanie ruchu
+### 4. Wykonanie ruchu
 ```bash
 curl -X POST "http://localhost:8080/api/games/660e8400-e29b-41d4-a716-446655440001/move" \
   -H "Content-Type: application/json" \
@@ -193,7 +210,7 @@ curl -X POST "http://localhost:8080/api/games/660e8400-e29b-41d4-a716-4466554400
     "y": 3,
     "color": "BLACK",
     "capturedStones": 2,
-    "timestamp": "2025-12-11T11:46:15Z"
+    "timestamp": "2025-12-17T11:46:15Z"
   },
   "capturedPositions": [
     {"x": 3, "y": 2},
@@ -216,8 +233,7 @@ curl -X POST "http://localhost:8080/api/games/660e8400-e29b-41d4-a716-4466554400
 ```json
 {
   "error": "POSITION_OCCUPIED",
-  "message": "Position is already occupied",
-  "timestamp": "2025-12-11T11:46:15Z"
+  "message": "Position is already occupied"
 }
 ```
 
@@ -225,8 +241,7 @@ curl -X POST "http://localhost:8080/api/games/660e8400-e29b-41d4-a716-4466554400
 ```json
 {
   "error": "OUT_OF_BOUNDS",
-  "message": "Position is outside the board boundaries",
-  "timestamp": "2025-12-11T11:46:15Z"
+  "message": "Position is outside the board boundaries"
 }
 ```
 
@@ -234,8 +249,7 @@ curl -X POST "http://localhost:8080/api/games/660e8400-e29b-41d4-a716-4466554400
 ```json
 {
   "error": "SUICIDE_MOVE",
-  "message": "Move would result in immediate capture (suicide)",
-  "timestamp": "2025-12-11T11:46:15Z"
+  "message": "Move would result in immediate capture (suicide)"
 }
 ```
 
@@ -243,12 +257,11 @@ curl -X POST "http://localhost:8080/api/games/660e8400-e29b-41d4-a716-4466554400
 ```json
 {
   "error": "NOT_YOUR_TURN",
-  "message": "It's not your turn",
-  "timestamp": "2025-12-11T11:46:15Z"
+  "message": "It's not your turn"
 }
 ```
 
-### 4. Pobranie listy ruchów
+### 5. Pobranie listy ruchów
 ```bash
 curl -X GET "http://localhost:8080/api/games/660e8400-e29b-41d4-a716-446655440001/moves"
 ```
@@ -263,28 +276,28 @@ curl -X GET "http://localhost:8080/api/games/660e8400-e29b-41d4-a716-44665544000
       "x": 3,
       "y": 3,
       "color": "BLACK",
-      "timestamp": "2025-12-11T10:36:00Z"
+      "timestamp": "2025-12-17T10:36:00Z"
     },
     {
       "moveNumber": 2,
       "x": 4,
       "y": 4,
       "color": "WHITE",
-      "timestamp": "2025-12-11T10:36:30Z"
+      "timestamp": "2025-12-17T10:36:30Z"
     },
     {
       "moveNumber": 3,
-      "x": null,
-      "y": null,
+      "x": -1,
+      "y": -1,
       "color": "BLACK",
-      "timestamp": "2025-12-11T10:37:00Z"
+      "timestamp": "2025-12-17T10:37:00Z"
     }
   ],
   "message": "Moves retrieved successfully"
 }
 ```
 
-### 5. Pas
+### 6. Pas
 ```bash
 curl -X POST "http://localhost:8080/api/games/660e8400-e29b-41d4-a716-446655440001/pass" \
   -H "X-Player-Id: 550e8400-e29b-41d4-a716-446655440000"
@@ -300,7 +313,7 @@ curl -X POST "http://localhost:8080/api/games/660e8400-e29b-41d4-a716-4466554400
     "y": -1,
     "color": "BLACK",
     "capturedStones": 0,
-    "timestamp": "2025-12-11T11:47:00Z"
+    "timestamp": "2025-12-17T11:47:00Z"
   },
   "capturedPositions": [],
   "currentTurn": "WHITE",
@@ -325,7 +338,7 @@ curl -X POST "http://localhost:8080/api/games/660e8400-e29b-41d4-a716-4466554400
     "y": -1,
     "color": "WHITE",
     "capturedStones": 0,
-    "timestamp": "2025-12-11T11:47:30Z"
+    "timestamp": "2025-12-17T11:47:30Z"
   },
   "capturedPositions": [],
   "currentTurn": null,
@@ -340,7 +353,7 @@ curl -X POST "http://localhost:8080/api/games/660e8400-e29b-41d4-a716-4466554400
 }
 ```
 
-### 6. Poddanie gry
+### 7. Poddanie gry
 ```bash
 curl -X POST "http://localhost:8080/api/games/660e8400-e29b-41d4-a716-446655440001/resign" \
   -H "X-Player-Id: 550e8400-e29b-41d4-a716-446655440000"
@@ -370,15 +383,15 @@ curl -X POST "http://localhost:8080/api/games/660e8400-e29b-41d4-a716-4466554400
     "y": 4,
     "color": "BLACK",
     "capturedStones": 0,
-    "timestamp": "2025-12-11T11:45:30Z"
+    "timestamp": "2025-12-17T11:45:30Z"
   },
-  "createdAt": "2025-12-11T10:35:00Z",
-  "updatedAt": "2025-12-11T11:48:00Z",
+  "createdAt": "2025-12-17T10:35:00Z",
+  "updatedAt": "2025-12-17T11:48:00Z",
   "message": "Player1 resigned. Player2 wins!"
 }
 ```
 
-### 7. Pobranie stanu planszy
+### 8. Pobranie stanu planszy
 ```bash
 curl -X GET "http://localhost:8080/api/games/660e8400-e29b-41d4-a716-446655440001/board"
 ```
@@ -443,6 +456,10 @@ curl -X POST "http://localhost:8080/api/games/join" \
   -H "Content-Type: application/json" \
   -H "X-Player-Id: {player1Id}" \
   -d '{"boardSize": 9}'
+# Zapisz waitingGameId z odpowiedzi
+
+# Sprawdzanie statusu w pętli
+curl -X GET "http://localhost:8080/api/games/waiting/{waitingGameId}"
 # Otrzyma status: WAITING
 
 # Gracz 2 dołącza - gra się rozpoczyna
@@ -451,6 +468,10 @@ curl -X POST "http://localhost:8080/api/games/join" \
   -H "X-Player-Id: {player2Id}" \
   -d '{"boardSize": 9}'
 # Zapisz gameId z odpowiedzi
+
+# Gracz 1 sprawdza ponownie status
+curl -X GET "http://localhost:8080/api/games/waiting/{waitingGameId}"
+# Otrzyma status: MATCHED oraz gameId
 ```
 
 ### 3. Rozgrywka
@@ -486,3 +507,7 @@ curl -X POST "http://localhost:8080/api/games/{gameId}/pass" \
 ```bash
 curl -X GET "http://localhost:8080/api/games/{gameId}"
 ```
+
+---
+
+*Dokumentacja API wygenerowana: Grudzień 2025*
