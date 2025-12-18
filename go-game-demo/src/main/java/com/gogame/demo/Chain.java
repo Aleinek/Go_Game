@@ -7,7 +7,6 @@ import java.util.Set;
 public class Chain {
     Set<Stone> stones;
     StoneColor color;
-    int breaths;
 
     public Chain(Set<Stone> stones, StoneColor color) {
         this.stones = stones;
@@ -18,10 +17,6 @@ public class Chain {
         this.stones = new HashSet<>();
         stones.add(stone);
         this.color = color;
-    }
-
-    public void addStone(Stone stone) {
-        stones.add(stone);
     }
 
     public Set<Stone> getStones() {

@@ -81,10 +81,4 @@ public class Game {
     void switchTurn() {
         currentTurn = (currentTurn == StoneColor.BLACK) ? StoneColor.WHITE : StoneColor.BLACK;
     }
-
-    void checkGameEnd() {
-        if (consecutivePasses >= 2) {
-            status = GameStatus.FINISHED;
-        }
-    }
 }

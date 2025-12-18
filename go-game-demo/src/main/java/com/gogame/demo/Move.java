@@ -25,8 +25,4 @@ public class Move {
         move.isPass = true;
         return move;
     }
-
-    public boolean isPass() {
-        return isPass;
-    }
 }

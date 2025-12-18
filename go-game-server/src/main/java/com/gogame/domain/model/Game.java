@@ -27,35 +27,6 @@ public class Game {
         this.consecutivePasses = 0;
     }
 
-    public MoveResult makeMove(Position position) {
-        if (status != GameStatus.IN_PROGRESS) {
-            return new MoveResult(false);
-        }
-
-        Player currentPlayer = (currentTurn == StoneColor.BLACK) ? blackPlayer : whitePlayer;
-        Move move;
-        if (position == null) {
-            move = Move.pass(currentPlayer, moves.size() + 1);
-            consecutivePasses++;
-            if (consecutivePasses >= 2) {
-                status = GameStatus.FINISHED;
-                return new MoveResult(true);
-            }
-        } else {
-            board.placeStone(position, currentTurn);
-            move = new Move(currentPlayer, position, moves.size() + 1);
-            consecutivePasses = 0;
-        }
-
-        moves.add(move);
-        currentTurn = (currentTurn == StoneColor.BLACK) ? StoneColor.WHITE : StoneColor.BLACK;
-        return new MoveResult(true);
-    }
-
-    public MoveResult pass() {
-        return makeMove(null);
-    }
-
     public void resign(Player player) {
         if (status == GameStatus.IN_PROGRESS) {
             status = GameStatus.RESIGNED;
