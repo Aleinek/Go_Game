@@ -13,7 +13,7 @@ import com.gogame.dto.*;
 
 public class Main {
 
-    private static final String SERVER_URL = "http://localhost:8080";
+    private static final String SERVER_URL = "http://gogame.adamkulwicki.pl:8080";
     public static void main(String[] args) {
         
         UUID playerId = null;
