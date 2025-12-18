@@ -69,14 +69,14 @@ public class Board {
     }
 
     public void placeStone(Position position, StoneColor color) {
-        Stone stone = new Stone(position, color);
-        Chain potentialChain = getNewStoneChain(stone); 
-
+        
         if(!position.isValid(size)) 
             throw new InvalidMoveException(ErrorCode.OUT_OF_BOUNDS);
         else if(!isEmpty(position)) 
             throw new InvalidMoveException(ErrorCode.POSITION_OCCUPIED);
-
+        
+        Stone stone = new Stone(position, color);
+        Chain potentialChain = getNewStoneChain(stone); 
         grid[position.getX()][position.getY()] = stone; // dodajemy kamienia na jego potencjalnie miejsce zeby algorytmy sprawdzajaca go widzialy
         
         int capturedChains = 0;
