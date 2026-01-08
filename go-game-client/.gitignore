@@ -1,0 +1,8 @@
+# ide
+.vscode/
+
+# maven
+target/
+
+# java
+*.class
