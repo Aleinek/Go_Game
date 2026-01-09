@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.VBox?>
+
+<BorderPane prefHeight="400.0" prefWidth="600.0" styleClass="root-pane" xmlns="http://javafx.com/javafx/25" xmlns:fx="http://javafx.com/fxml/1" fx:controller="student.pwr.App">
+    <center>
+        <VBox alignment="CENTER" spacing="20">
+            <Label styleClass="title-label" text="Slay">
+            <graphic>
+               <Label styleClass="title-label" text="Go Game Client" />
+            </graphic></Label>
+            <Button onAction="#handleStartGame" text="Start Game" />
+        </VBox>
+    </center>
+</BorderPane>
