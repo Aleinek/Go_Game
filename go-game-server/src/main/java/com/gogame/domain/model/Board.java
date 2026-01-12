@@ -17,6 +17,7 @@ public class Board {
     private final int size;
     private final Stone[][] grid;
     private final Map<Position, Chain> chains;
+    Position koPosition;
     Player blackPlayer;
     Player whitePlayer;
     Territory territory;
@@ -25,6 +26,7 @@ public class Board {
         this.size = size;
         this.grid = new Stone[size][size];
         this.chains = new HashMap<>();
+        this.koPosition = null;
         this.blackPlayer = blackPlayer;
         this.whitePlayer = whitePlayer;
         this.territory = new Territory(size);
@@ -74,30 +76,42 @@ public class Board {
             throw new InvalidMoveException(ErrorCode.OUT_OF_BOUNDS);
         else if(!isEmpty(position)) 
             throw new InvalidMoveException(ErrorCode.POSITION_OCCUPIED);
+        else if(position.equals(koPosition))
+            throw new InvalidMoveException(ErrorCode.KO_VIOLATION);
         
         Stone stone = new Stone(position, color);
         Chain potentialChain = getNewStoneChain(stone); 
         grid[position.getX()][position.getY()] = stone; // dodajemy kamienia na jego potencjalnie miejsce zeby algorytmy sprawdzajaca go widzialy
         
-        int capturedChains = 0;
+        int capturedStones = 0;
+        Position potentialKoPos = null;
+
         Set<Chain> enemyChains = getEnemyNeighbouringChainsSet(position, color); 
         for(Chain enemyChain : enemyChains) {
             if(isCaptured(enemyChain)) {
-                capturedChains++;
+                // zapamietujemy potencjalna pozycje ko
+                if(enemyChain.getStones().size() == 1)
+                    potentialKoPos = enemyChain.getStones().iterator().next().getPosition();
+                capturedStones += enemyChain.getStones().size();
                 removeChain(enemyChain, color);
             }
         }
 
-        if(moveIsSuicidal(potentialChain) && capturedChains <= 0) {
+        if(moveIsSuicidal(potentialChain) && capturedStones <= 0) {
             grid[position.getX()][position.getY()] = null;
             throw new InvalidMoveException(ErrorCode.SUICIDE_MOVE);
         } 
+
+        if(capturedStones == 1 && potentialChain.getStones().size() == 1) {
+            koPosition = potentialKoPos;
+        } else {
+            koPosition = null;
+        }
         
         for (Stone s : potentialChain.getStones()) {
                 chains.put(s.getPosition(), potentialChain);
         }                  
 
-        
     }
 
     public List<Position> getEmptyNeighboursPositions(Position position) {
