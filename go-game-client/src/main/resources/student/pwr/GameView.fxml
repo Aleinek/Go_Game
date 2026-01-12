@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.layout.Pane?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.shape.Circle?>
+<?import javafx.scene.layout.Region?>
+
+<VBox spacing="20.0" xmlns="http://javafx.com/javafx/25" xmlns:fx="http://javafx.com/fxml/1" fx:controller="student.pwr.controller.GameController">
+    <children>
+        <Pane fx:id="gameHeader" prefHeight="140.0" prefWidth="700.0">
+            <children>
+                <VBox alignment="CENTER" prefHeight="140.0" prefWidth="700.0" spacing="10.0">
+                    <Label fx:id="statusLabel" text="Waiting for opponent..." style="-fx-font-size: 24px; -fx-font-weight: bold; -fx-text-fill: black;"/>
+                    
+                    <HBox alignment="CENTER" spacing="15.0" prefWidth="660.0">
+                        <Button text="PASS" onAction="#onPassClicked" prefWidth="80.0" style="-fx-font-weight: bold;"/>
+                        
+                        <Region prefWidth="30.0" />
+
+                        <!-- Black Stats -->
+                        <HBox alignment="CENTER" spacing="10.0" style="-fx-background-color: rgba(0,0,0,0.3); -fx-padding: 8 15; -fx-background-radius: 10;">
+                            <Circle radius="12.0" fill="BLACK" stroke="WHITE" strokeWidth="2.0" />
+                            <VBox alignment="CENTER_LEFT">
+                                <Label text="BLACK" style="-fx-font-weight: bold; -fx-text-fill: white;"/>
+                                <Label fx:id="blackCapturedLabel" text="Captured: 0" style="-fx-text-fill: lightgray; -fx-font-size: 12px;"/>
+                                <Label fx:id="blackTerritoryLabel" text="Territory: 0" style="-fx-text-fill: lightgray; -fx-font-size: 12px;"/>
+                            </VBox>
+                        </HBox>
+
+                        <Region prefWidth="20.0" />
+
+                        <!-- White Stats -->
+                        <HBox alignment="CENTER" spacing="10.0" style="-fx-background-color: rgba(255,255,255,0.2); -fx-padding: 8 15; -fx-background-radius: 10;">
+                            <Circle radius="12.0" fill="WHITE" stroke="BLACK" strokeWidth="1.0" />
+                            <VBox alignment="CENTER_LEFT">
+                                <Label text="WHITE" style="-fx-font-weight: bold; -fx-text-fill: white;"/>
+                                <Label fx:id="whiteCapturedLabel" text="Captured: 0" style="-fx-text-fill: white; -fx-font-size: 12px;"/>
+                                <Label fx:id="whiteTerritoryLabel" text="Territory: 0" style="-fx-text-fill: white; -fx-font-size: 12px;"/>
+                            </VBox>
+                        </HBox>
+
+                        <Region prefWidth="30.0" />
+
+                        <Button text="RESIGN" onAction="#onResignClicked" prefWidth="80.0" style="-fx-font-weight: bold; -fx-background-color: #e74c3c; -fx-text-fill: white;"/>
+                    </HBox>
+                </VBox>
+            </children>
+        </Pane>
+        <Pane fx:id="gamePane" prefHeight="700.0" prefWidth="700.0" />
+    </children>
+</VBox>

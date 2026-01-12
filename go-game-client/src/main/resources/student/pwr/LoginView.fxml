@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.layout.Pane?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.RadioButton?>
+<?import javafx.scene.control.ToggleGroup?>
+
+<VBox spacing="20.0" xmlns="http://javafx.com/javafx/25" xmlns:fx="http://javafx.com/fxml/1" fx:controller="student.pwr.controller.LoginController">
+    <children>
+        <Pane fx:id="loginHeader" prefHeight="140.0" prefWidth="700.0">
+            <children>
+                <VBox alignment="CENTER" prefHeight="140.0" prefWidth="700.0">
+                    <children>
+                        <Label text="Welcome to Go Game!" style="-fx-font-size: 36px; -fx-font-weight: bold;"/>
+                    </children>
+                </VBox>
+            </children>
+        </Pane>
+
+        <Pane fx:id="loginPane" prefHeight="700.0" prefWidth="700.0">
+            <children>
+                <VBox alignment="CENTER" layoutX="100.0" layoutY="100.0" prefHeight="500.0" prefWidth="500.0" spacing="40.0" style="-fx-background-color: transparent;">
+                <children>
+                    <VBox alignment="CENTER_LEFT" maxWidth="400.0" spacing="10.0">
+                        <children>
+                            <Label text="Username:" style="-fx-font-size: 18px; -fx-font-weight: bold;" />
+                            <TextField fx:id="usernameField" promptText="Enter your nickname..." style="-fx-font-size: 16px; -fx-pref-height: 40px;" />
+                        </children>
+                    </VBox>
+
+                    <VBox alignment="CENTER_LEFT" maxWidth="400.0" spacing="15.0">
+                        <children>
+                            <Label text="Board size:" style="-fx-font-size: 18px; -fx-font-weight: bold;" />
+                            <HBox alignment="CENTER" spacing="25.0">
+                            <children>
+                                <RadioButton fx:id="size19" text="19x19" selected="true" style="-fx-font-size: 16px;">
+                                    <toggleGroup>
+                                        <ToggleGroup fx:id="boardSizeGroup" />
+                                    </toggleGroup>
+                                </RadioButton>
+                                <RadioButton fx:id="size13" text="13x13" toggleGroup="$boardSizeGroup" style="-fx-font-size: 16px;" />
+                                <RadioButton fx:id="size9" text="9x9" toggleGroup="$boardSizeGroup" style="-fx-font-size: 16px;" />
+                            </children>
+                            </HBox>
+                        </children>
+                    </VBox>
+                    <Button fx:id="searchGameButton" text="Search Game" onAction="#onSearchGameClicked" style="-fx-font-size: 20px; -fx-padding: 15 40;" />
+                </children>
+                </VBox>
+            </children>
+        </Pane>
+    </children>
+</VBox>

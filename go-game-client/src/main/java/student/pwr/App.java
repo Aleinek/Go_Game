@@ -1,13 +1,16 @@
 package student.pwr;
 
 import javafx.application.Application;
+import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
+import javafx.scene.layout.Pane;
 import javafx.stage.Stage;
 
 public class App extends Application {
 
+    
     @Override
     public void start(Stage primaryStage) throws Exception {
         // Ładowanie FXML
@@ -19,14 +22,15 @@ public class App extends Application {
         scene.getStylesheets().add(getClass().getResource("/student/pwr/Style.css").toExternalForm());
         
         primaryStage.setTitle("Go Game - PWR Edition");
+        primaryStage.setResizable(true);
+        primaryStage.setMaximized(false);
+
+        
         primaryStage.setScene(scene);
         primaryStage.show();
     }
 
-    // Metoda dla przycisku w FXML
-    public void handleStartGame() {
-        System.out.println("Slay! Gra się uruchamia...");
-    }
+    
 
     public static void main(String[] args) {
         launch(args);
