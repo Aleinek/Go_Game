@@ -27,14 +27,14 @@ public class GameNotificationService {
         );
         
         GameEvent event = new GameEvent(GameEvent.GAME_STARTED, payload);
-        sendToUser(playerId, "/queue/game", event);
+        sendToPlayer(playerId, event);
     }
     
     public void notifyOpponentMoved(UUID playerId, int moveNumber, int x, int y, 
                                     String color, List<GameEventPayloads.PositionInfo> capturedPositions,
                                     String currentTurn) {
         GameEventPayloads.MoveInfo moveInfo = new GameEventPayloads.MoveInfo(
-            moveNumber, x, y, color
+            moveNumber, color
         );
         
         GameEventPayloads.OpponentMovedPayload payload = new GameEventPayloads.OpponentMovedPayload(
@@ -44,7 +44,7 @@ public class GameNotificationService {
         );
         
         GameEvent event = new GameEvent(GameEvent.OPPONENT_MOVED, payload);
-        sendToUser(playerId, "/queue/game", event);
+        sendToPlayer(playerId, event);
     }
     
     public void notifyOpponentPassed(UUID playerId, int moveNumber, 
@@ -56,7 +56,7 @@ public class GameNotificationService {
         );
         
         GameEvent event = new GameEvent(GameEvent.OPPONENT_PASSED, payload);
-        sendToUser(playerId, "/queue/game", event);
+        sendToPlayer(playerId, event);
     }
     
     public void notifyGameEnded(UUID playerId, String reason, String winner, String resignedBy) {
@@ -67,14 +67,14 @@ public class GameNotificationService {
         );
         
         GameEvent event = new GameEvent(GameEvent.GAME_ENDED, payload);
-        sendToUser(playerId, "/queue/game", event);
+        sendToPlayer(playerId, event);
     }
     
-    private void sendToUser(UUID userId, String destination, Object payload) {
-        messagingTemplate.convertAndSendToUser(
-            userId.toString(),
-            destination,
-            payload
-        );
+    /**
+     * Wysyła zdarzenie do konkretnego gracza na kanał /topic/game/{playerId}
+     */
+    private void sendToPlayer(UUID playerId, Object payload) {
+        String destination = "/topic/game/" + playerId.toString();
+        messagingTemplate.convertAndSend(destination, payload);
     }
 }

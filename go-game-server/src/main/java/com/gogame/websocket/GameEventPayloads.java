@@ -24,8 +24,6 @@ public class GameEventPayloads {
     
     public record MoveInfo(
         int moveNumber,
-        int x,
-        int y,
         String color
     ) {}
     

@@ -1,0 +1,193 @@
+package com.gogame.websocket;
+
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import com.gogame.dto.websocket.*;
+
+import org.springframework.messaging.converter.MappingJackson2MessageConverter;
+import org.springframework.messaging.simp.stomp.*;
+import org.springframework.web.socket.client.standard.StandardWebSocketClient;
+import org.springframework.web.socket.messaging.WebSocketStompClient;
+import org.springframework.web.socket.sockjs.client.SockJsClient;
+import org.springframework.web.socket.sockjs.client.Transport;
+import org.springframework.web.socket.sockjs.client.WebSocketTransport;
+
+import java.lang.reflect.Type;
+import java.util.List;
+import java.util.UUID;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+
+/**
+ * Klient WebSocket do komunikacji z serwerem Go Game przez STOMP.
+ * Obsługuje połączenie, subskrypcję zdarzeń gry i synchronizację z głównym wątkiem.
+ */
+public class GameWebSocketClient {
+
+    private final String serverUrl;
+    private final ObjectMapper objectMapper;
+    private WebSocketStompClient stompClient;
+    private StompSession session;
+    private UUID playerId;
+    
+    // Kolejki do przekazywania zdarzeń do głównego wątku
+    private final BlockingQueue<GameStartedPayload> gameStartedQueue = new LinkedBlockingQueue<>();
+    private final BlockingQueue<GameEventWrapper> gameEventQueue = new LinkedBlockingQueue<>();
+    
+    // Wrapper do przechowywania różnych typów zdarzeń
+    public record GameEventWrapper(String type, Object payload) {}
+
+    public GameWebSocketClient(String serverUrl) {
+        this.serverUrl = serverUrl.replace("http://", "ws://").replace("https://", "wss://");
+        this.objectMapper = new ObjectMapper();
+        this.objectMapper.registerModule(new JavaTimeModule());
+        this.objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+    }
+
+    /**
+     * Nawiązuje połączenie WebSocket i subskrybuje zdarzenia gry dla danego gracza.
+     */
+    public void connect(UUID playerId) throws InterruptedException, ExecutionException, TimeoutException {
+        this.playerId = playerId;
+        
+        // Konfiguracja transportu SockJS
+        List<Transport> transports = List.of(new WebSocketTransport(new StandardWebSocketClient()));
+        SockJsClient sockJsClient = new SockJsClient(transports);
+        
+        stompClient = new WebSocketStompClient(sockJsClient);
+        
+        // Konfiguracja konwertera JSON
+        MappingJackson2MessageConverter converter = new MappingJackson2MessageConverter();
+        converter.setObjectMapper(objectMapper);
+        stompClient.setMessageConverter(converter);
+        
+        // Połączenie z serwerem
+        String wsUrl = serverUrl + "/ws";
+        StompHeaders connectHeaders = new StompHeaders();
+        connectHeaders.add("X-Player-Id", playerId.toString());
+        
+        session = stompClient.connectAsync(wsUrl, new GameSessionHandler(), connectHeaders)
+                .get(10, TimeUnit.SECONDS);
+        
+        // Subskrypcja zdarzeń gry dla tego gracza
+        subscribeToGameEvents();
+    }
+
+    /**
+     * Subskrybuje kanał zdarzeń gry dla aktualnego gracza.
+     */
+    private void subscribeToGameEvents() {
+        // Subskrybuj kanał /topic/game/{playerId} - serwer wysyła tam zdarzenia
+        String destination = "/topic/game/" + playerId.toString();
+        
+        session.subscribe(destination, new StompFrameHandler() {
+            @Override
+            public Type getPayloadType(StompHeaders headers) {
+                return JsonNode.class;
+            }
+
+            @Override
+            public void handleFrame(StompHeaders headers, Object payload) {
+                try {
+                    JsonNode node = (JsonNode) payload;
+                    String eventType = node.get("type").asText();
+                    JsonNode payloadNode = node.get("payload");
+                    
+                    switch (eventType) {
+                        case GameEvent.GAME_STARTED -> {
+                            GameStartedPayload gameStarted = objectMapper.treeToValue(
+                                payloadNode, GameStartedPayload.class);
+                            gameStartedQueue.offer(gameStarted);
+                        }
+                        case GameEvent.OPPONENT_MOVED -> {
+                            OpponentMovedPayload moved = objectMapper.treeToValue(
+                                payloadNode, OpponentMovedPayload.class);
+                            gameEventQueue.offer(new GameEventWrapper(eventType, moved));
+                        }
+                        case GameEvent.OPPONENT_PASSED -> {
+                            OpponentPassedPayload passed = objectMapper.treeToValue(
+                                payloadNode, OpponentPassedPayload.class);
+                            gameEventQueue.offer(new GameEventWrapper(eventType, passed));
+                        }
+                        case GameEvent.GAME_ENDED -> {
+                            GameEndedPayload ended = objectMapper.treeToValue(
+                                payloadNode, GameEndedPayload.class);
+                            gameEventQueue.offer(new GameEventWrapper(eventType, ended));
+                        }
+                    }
+                } catch (Exception e) {
+                    System.err.println("Błąd przetwarzania zdarzenia WebSocket: " + e.getMessage());
+                }
+            }
+        });
+    }
+
+    /**
+     * Czeka na zdarzenie GAME_STARTED (matchmaking zakończony).
+     * Blokuje do momentu otrzymania zdarzenia lub timeout.
+     */
+    public GameStartedPayload waitForGameStart(long timeout, TimeUnit unit) throws InterruptedException {
+        return gameStartedQueue.poll(timeout, unit);
+    }
+
+    /**
+     * Czeka na dowolne zdarzenie gry (ruch przeciwnika, pass, koniec gry).
+     * Blokuje do momentu otrzymania zdarzenia lub timeout.
+     */
+    public GameEventWrapper waitForGameEvent(long timeout, TimeUnit unit) throws InterruptedException {
+        return gameEventQueue.poll(timeout, unit);
+    }
+
+    /**
+     * Sprawdza czy jest dostępne zdarzenie gry bez blokowania.
+     */
+    public GameEventWrapper pollGameEvent() {
+        return gameEventQueue.poll();
+    }
+
+    /**
+     * Sprawdza czy połączenie WebSocket jest aktywne.
+     */
+    public boolean isConnected() {
+        return session != null && session.isConnected();
+    }
+
+    /**
+     * Zamyka połączenie WebSocket.
+     */
+    public void disconnect() {
+        if (session != null && session.isConnected()) {
+            session.disconnect();
+        }
+        if (stompClient != null) {
+            stompClient.stop();
+        }
+    }
+
+    /**
+     * Handler sesji STOMP - obsługuje zdarzenia cyklu życia połączenia.
+     */
+    private class GameSessionHandler extends StompSessionHandlerAdapter {
+        
+        @Override
+        public void afterConnected(StompSession session, StompHeaders connectedHeaders) {
+            System.out.println("Połączono z serwerem WebSocket");
+        }
+
+        @Override
+        public void handleException(StompSession session, StompCommand command, 
+                                   StompHeaders headers, byte[] payload, Throwable exception) {
+            System.err.println("Błąd WebSocket: " + exception.getMessage());
+        }
+
+        @Override
+        public void handleTransportError(StompSession session, Throwable exception) {
+            System.err.println("Błąd transportu WebSocket: " + exception.getMessage());
+        }
+    }
+}

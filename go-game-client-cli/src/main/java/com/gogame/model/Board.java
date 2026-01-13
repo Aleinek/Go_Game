@@ -10,7 +10,6 @@ public class Board {
 
     int size;
     Stone[][] stones;
-    Territory territory;
 
     public Board(BoardResponseDTO boardResponseDTO) {
         this.size = boardResponseDTO.size();
@@ -34,9 +33,5 @@ public class Board {
 
     public int getSize() {
         return size;
-    }
-
-    public Territory getTerritory() {
-        return territory;
     }
 }

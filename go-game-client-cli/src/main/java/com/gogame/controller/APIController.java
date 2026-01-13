@@ -74,27 +74,6 @@ public class APIController {
         }
     }
 
-    public WaitingStatus checkWaitingStatus(UUID waitingId) {
-        try {
-            HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create(serverURL + "/api/games/waiting/" + waitingId))
-                    .header("Content-Type", "application/json")
-                    .GET()
-                    .build();
-
-            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
-            
-            if (response.statusCode() == 200) {
-                return mapper.readValue(response.body(), WaitingStatus.class);
-            } else {
-                throw new RuntimeException("Bład sprawdzania statusu kolejki. Kod: " + response.statusCode());
-            }
-
-        } catch (IOException | InterruptedException e) {
-            throw new RuntimeException("Bład sieci podczas sprawdzania kolejki", e);
-        }
-    }
-
     public GameResponse fetchGameStatus(UUID gameId) {
         try {
             HttpRequest request = HttpRequest.newBuilder()
