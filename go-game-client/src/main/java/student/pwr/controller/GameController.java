@@ -4,6 +4,7 @@ import javafx.application.Platform;
 import javafx.concurrent.Task;
 import javafx.fxml.FXML;
 import javafx.scene.control.Label;
+import javafx.scene.control.Button;
 import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
@@ -13,8 +14,15 @@ import student.pwr.dto.BoardResponseDTO;
 import student.pwr.dto.GameResponse;
 import student.pwr.dto.StoneDTO;
 import student.pwr.dto.MoveResponse;
+import student.pwr.dto.NegotiationStateResponse;
 import student.pwr.utils.AlertUtils;
 import java.util.UUID;
+import java.util.Set;
+import java.util.HashSet;
+import java.util.stream.Collectors;
+
+import student.pwr.dto.ScoreResponse;
+import javafx.scene.control.Alert;
 
 public class GameController {
 
@@ -26,6 +34,11 @@ public class GameController {
     @FXML private Label whiteCapturedLabel;
     @FXML private Label whiteTerritoryLabel;
     
+    @FXML private Button passButton;
+    @FXML private Button resumeButton;
+    @FXML private Button acceptButton;
+    @FXML private Button resignButton;
+    
     private APIController apiController;
     private GameResponse currentGame;
     private UUID myPlayerId;
@@ -34,6 +47,10 @@ public class GameController {
     private int boardSize;
     private double cellSize;
     private final double BOARD_PADDING = 40.0;
+    
+    // Negotiation state
+    private NegotiationStateResponse currentNegotiation;
+    private boolean isNegotiating = false;
 
     @FXML
     public void initialize() {
@@ -114,6 +131,42 @@ public class GameController {
     }
 
     private void handleBoardClick(int x, int y) {
+        if (isNegotiating) {
+             if (currentNegotiation == null) {
+                 return;
+             }
+             
+             Integer targetChainId = null;
+             if (currentNegotiation.chains() != null) {
+                 for(NegotiationStateResponse.ChainInfoDto chain : currentNegotiation.chains()) {
+                     for(NegotiationStateResponse.PositionDto pos : chain.positions()) {
+                         if(pos.x() == x && pos.y() == y) {
+                             targetChainId = chain.chainId();
+                             break;
+                         }
+                     }
+                     if(targetChainId != null) break;
+                 }
+             }
+             
+             if(targetChainId != null) {
+                 final int chainId = targetChainId;
+                 new Thread(() -> {
+                     try {
+                         NegotiationStateResponse newState = apiController.toggleChainStatus(currentGame.id(), myPlayerId, chainId);
+                         this.currentNegotiation = newState; // Optimistic update
+                         Platform.runLater(() -> {
+                             // Force refresh logic
+                             refreshGameState();
+                         });
+                     } catch (Exception e) {
+                         e.printStackTrace();
+                     }
+                 }).start();
+             }
+             return;
+        }
+
         if (!isMyTurn) {
             System.out.println("Nie Twoja tura!");
             return;
@@ -148,7 +201,10 @@ public class GameController {
             @Override
             protected Void call() throws Exception {
                 while (true) {
-                    if (currentGame != null && !"IN_PROGRESS".equals(currentGame.status())) {
+                    // Stop loop if game is finished (not IN_PROGRESS and not NEGOTIATION)
+                    String status = currentGame.status();
+                    if (currentGame != null 
+                            && ("RESIGNED".equals(status) || "FINISHED".equals(status))) {
                         Platform.runLater(() -> handleGameEnd(currentGame));
                         break;
                     }
@@ -173,6 +229,17 @@ public class GameController {
             
             BoardResponseDTO board = apiController.fetchBoard(currentGame.id());
 
+            String status = game.status();
+            if ("NEGOTIATING".equals(status)) {
+                this.isNegotiating = true;
+                this.currentNegotiation = apiController.getNegotiationState(game.id(), myPlayerId);
+            } else {
+                this.isNegotiating = false;
+                if (!"FINISHED".equals(status) && !"RESIGNED".equals(status)) {
+                    this.currentNegotiation = null;
+                }
+            }
+
             Platform.runLater(() -> {
                 updateUI(game, board);
             });
@@ -187,29 +254,70 @@ public class GameController {
         boolean itIsMyTurn = myColor.equals(game.currentTurn());
         this.isMyTurn = itIsMyTurn;
         
-        if (itIsMyTurn) {
-            statusLabel.setText("YOUR TURN (" + myColor + ")");
-            statusLabel.setTextFill(Color.GREEN);
+        if (isNegotiating) {
+            statusLabel.setText("NEGOTIATION PHASE");
+            statusLabel.setTextFill(Color.ORANGE);
+            
+            setNegotiationMode(true);
+            
+            if (currentNegotiation != null) {
+                boolean acceptedByMe = "BLACK".equals(myColor) ? currentNegotiation.blackAccepted() : currentNegotiation.whiteAccepted();
+                
+                if (acceptedByMe) {
+                    acceptButton.setDisable(true);
+                    acceptButton.setText("ACCEPTED");
+                } else {
+                    acceptButton.setDisable(false);
+                    acceptButton.setText("ACCEPT SCORE");
+                }
+                
+                // Show score preview if available
+                if (currentNegotiation.scorePreview() != null) {
+                    blackTerritoryLabel.setText("Territory: " + currentNegotiation.scorePreview().blackTerritory());
+                    whiteTerritoryLabel.setText("Territory: " + currentNegotiation.scorePreview().whiteTerritory());
+                }
+            }
+            
         } else {
-            statusLabel.setText("Opponent's turn...");
-            statusLabel.setTextFill(Color.RED);
-        }
-
-        // Update captured stones and territory
-        if (game.blackPlayer() != null) {
-            blackCapturedLabel.setText("Captured: " + game.blackPlayer().capturedStones());
-            blackTerritoryLabel.setText("Territory: " + board.blackTerritory());
-        }
-        if (game.whitePlayer() != null) {
-            whiteCapturedLabel.setText("Captured: " + game.whitePlayer().capturedStones());
-            whiteTerritoryLabel.setText("Territory: " + board.whiteTerritory());
+            // Normal game state
+            setNegotiationMode(false);
+        
+            if (itIsMyTurn) {
+                statusLabel.setText("YOUR TURN (" + myColor + ")");
+                statusLabel.setTextFill(Color.GREEN);
+            } else {
+                statusLabel.setText("Opponent's turn...");
+                statusLabel.setTextFill(Color.RED);
+            }
+        
+            // Update captured stones and territory existing logic
+            if (game.blackPlayer() != null) {
+                blackCapturedLabel.setText("Captured: " + game.blackPlayer().capturedStones());
+                blackTerritoryLabel.setText("Territory: " + board.blackTerritory());
+            }
+            if (game.whitePlayer() != null) {
+                whiteCapturedLabel.setText("Captured: " + game.whitePlayer().capturedStones());
+                whiteTerritoryLabel.setText("Territory: " + board.whiteTerritory());
+            }
         }
 
         // Redraw stones
         clearStones();
         
+        Set<String> deadPositions = new HashSet<>();
+        if (isNegotiating && currentNegotiation != null && currentNegotiation.chains() != null) {
+            for (NegotiationStateResponse.ChainInfoDto chain : currentNegotiation.chains()) {
+                if ("DEAD".equals(chain.status())) {
+                    for (NegotiationStateResponse.PositionDto pos : chain.positions()) {
+                        deadPositions.add(pos.x() + "," + pos.y());
+                    }
+                }
+            }
+        }
+        
         for (StoneDTO stone : board.stones()) {
-            drawStone(stone.x(), stone.y(), stone.color());
+            boolean isDead = deadPositions.contains(stone.x() + "," + stone.y());
+            drawStone(stone.x(), stone.y(), stone.color(), isDead);
         }
     }
 
@@ -217,27 +325,108 @@ public class GameController {
         gamePane.getChildren().removeIf(node -> "stone".equals(node.getUserData()));
     }
 
-    private void drawStone(int x, int y, String color) {
+    private void drawStone(int x, int y, String color, boolean isDead) {
         Circle stone = new Circle(cellSize / 2.2);
         stone.setUserData("stone");
         stone.setCenterX(BOARD_PADDING + x * cellSize);
         stone.setCenterY(BOARD_PADDING + y * cellSize);
+        stone.setMouseTransparent(true);
         
-        if ("BLACK".equals(color)) {
-            stone.setFill(Color.BLACK);
-            stone.setStroke(Color.WHITE); 
+        if (isDead) {
+            if ("BLACK".equals(color)) {
+                stone.setFill(Color.rgb(0, 0, 0, 0.5)); // Semi-transparent black
+            } else {
+                stone.setFill(Color.rgb(255, 255, 255, 0.5)); // Semi-transparent white
+            }
+            stone.setStroke(Color.RED);
+            stone.setStrokeWidth(3.0);
+            stone.setOpacity(1.0);
         } else {
-            stone.setFill(Color.WHITE);
-            stone.setStroke(Color.BLACK);
+            if ("BLACK".equals(color)) {
+                stone.setFill(Color.BLACK);
+                stone.setStroke(Color.WHITE); 
+                stone.setStrokeWidth(1.0);
+            } else {
+                stone.setFill(Color.WHITE);
+                stone.setStroke(Color.BLACK);
+                stone.setStrokeWidth(1.0);
+            }
+            stone.setOpacity(1.0);
         }
         
         gamePane.getChildren().add(stone);
     }
     
     private void handleGameEnd(GameResponse game) {
-        statusLabel.setText("Game Over: " + game.status());
+        setNegotiationMode(false);
         isMyTurn = false;
-        AlertUtils.showAlert("Koniec gry", "Gra zakończona! Status: " + game.status());
+        statusLabel.setText("Game Over: " + game.status());
+        statusLabel.setTextFill(Color.BLACK);
+
+        if ("FINISHED".equals(game.status())) {
+            new Thread(() -> {
+                try {
+                    ScoreResponse score = null;
+                    
+                    // Try to use cached negotiation state first
+                    if (currentNegotiation != null && currentNegotiation.scorePreview() != null) {
+                        var sp = currentNegotiation.scorePreview();
+                        score = new ScoreResponse(
+                            sp.blackTerritory(), sp.whiteTerritory(), sp.blackPrisoners(), sp.whitePrisoners(),
+                            sp.blackDeadStones(), sp.whiteDeadStones(), sp.komi(), sp.blackTotal(), sp.whiteTotal(),
+                            sp.winner(), sp.scoreDifference(), "Game Over"
+                        );
+                    } else {
+                        // Fallback to fetching
+                        score = apiController.getScorePreview(game.id(), myPlayerId);
+                    }
+                    
+                    final ScoreResponse finalScore = score;
+                    Platform.runLater(() -> {
+                        String winner = finalScore.winner();
+                        if (winner == null) {
+                            winner = finalScore.blackTotal() > finalScore.whiteTotal() ? "BLACK" : "WHITE";
+                        }
+                        
+                        double diff = Math.abs(finalScore.blackTotal() - finalScore.whiteTotal());
+                        
+                        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+                        alert.setTitle("Game Over");
+                        alert.setHeaderText("Winner: " + winner);
+                        alert.setContentText(String.format(
+                            "Black Total: %.1f\n - Territory: %d\n - Prisoners: %d\n - Dead Stones: %d\n\n" +
+                            "White Total: %.1f\n - Territory: %d\n - Prisoners: %d\n - Dead Stones: %d\n - Komi: %.1f\n\n" +
+                            "Score Difference: %.1f",
+                            finalScore.blackTotal(), finalScore.blackTerritory(), finalScore.blackPrisoners(), finalScore.blackDeadStones(),
+                            finalScore.whiteTotal(), finalScore.whiteTerritory(), finalScore.whitePrisoners(), finalScore.whiteDeadStones(), finalScore.komi(),
+                            diff
+                        ));
+                        alert.showAndWait();
+                    });
+                } catch (Exception e) {
+                   e.printStackTrace();
+                   Platform.runLater(() -> AlertUtils.showAlert("Game Over", "Could not fetch final score. Status: " + game.status() + "\nError: " + e.getMessage()));
+                }
+            }).start();
+        } else if ("RESIGNED".equals(game.status())) {
+             String msg = game.message();
+             Alert alert = new Alert(Alert.AlertType.INFORMATION);
+             alert.setTitle("Game Over");
+             alert.setHeaderText("Result: Resignation");
+             alert.setContentText(msg != null && !msg.isBlank() ? msg : "A player has resigned.");
+             alert.showAndWait();
+        } else {
+             String msg = game.message();
+             if (msg == null || msg.isBlank()) {
+                 msg = "Unknown result.";
+             }
+             
+             Alert alert = new Alert(Alert.AlertType.INFORMATION);
+             alert.setTitle("Game Over");
+             alert.setHeaderText("Game Ended: " + game.status());
+             alert.setContentText(msg);
+             alert.showAndWait();
+        }
     }
 
     @FXML
@@ -263,5 +452,41 @@ public class GameController {
                 e.printStackTrace();
             }
         }).start();
+    }
+    
+    @FXML
+    private void onAcceptClicked() {
+        new Thread(() -> {
+            try {
+                apiController.acceptScore(currentGame.id(), myPlayerId);
+                Platform.runLater(this::refreshGameState);
+            } catch (Exception e) {
+                Platform.runLater(() -> AlertUtils.showAlert("Error", "Could not accept score: " + e.getMessage()));
+            }
+        }).start();
+    }
+    
+    @FXML
+    private void onResumeClicked() {
+        new Thread(() -> {
+            try {
+                apiController.resumePlaying(currentGame.id(), myPlayerId);
+                Platform.runLater(this::refreshGameState);
+            } catch (Exception e) {
+               Platform.runLater(() -> AlertUtils.showAlert("Error", "Could not resume game: " + e.getMessage()));
+            }
+        }).start();
+    }
+
+    private void setNegotiationMode(boolean isNegotiating) {
+        passButton.setVisible(!isNegotiating);
+        passButton.setManaged(!isNegotiating);
+        resignButton.setVisible(!isNegotiating);
+        resignButton.setManaged(!isNegotiating);
+        
+        resumeButton.setVisible(isNegotiating);
+        resumeButton.setManaged(isNegotiating);
+        acceptButton.setVisible(isNegotiating);
+        acceptButton.setManaged(isNegotiating);
     }
 }

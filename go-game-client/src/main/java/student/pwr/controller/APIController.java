@@ -198,4 +198,115 @@ public class APIController {
             throw new RuntimeException("Błąd sieci podczas pobierania planszy", e);
         }
     }
+
+    // ============ Negotiation API methods ============
+    
+    public NegotiationStateResponse getNegotiationState(UUID gameId, UUID playerId) {
+        try {
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(serverURL + "/api/games/" + gameId + "/negotiation"))
+                    .header("Content-Type", "application/json")
+                    .header("X-Player-Id", playerId.toString())
+                    .GET()
+                    .build();
+
+            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+
+            if (response.statusCode() == 200) {
+                return mapper.readValue(response.body(), NegotiationStateResponse.class);
+            } else {
+                throw new RuntimeException("Błąd pobierania stanu negocjacji! Kod: " + response.statusCode() + ", Treść: " + response.body());
+            }
+
+        } catch (IOException | InterruptedException e) {
+            throw new RuntimeException("Błąd sieci podczas pobierania negocjacji", e);
+        }
+    }
+    
+    public ScoreResponse getScorePreview(UUID gameId, UUID playerId) {
+        try {
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(serverURL + "/api/games/" + gameId + "/negotiation/score"))
+                    .header("Content-Type", "application/json")
+                    .header("X-Player-Id", playerId.toString())
+                    .GET()
+                    .build();
+
+            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+
+            if (response.statusCode() == 200) {
+                return mapper.readValue(response.body(), ScoreResponse.class);
+            } else {
+                throw new RuntimeException("Błąd pobierania wyniku! Kod: " + response.statusCode() + ", Treść: " + response.body());
+            }
+
+        } catch (IOException | InterruptedException e) {
+            throw new RuntimeException("Błąd sieci podczas pobierania wyniku", e);
+        }
+    }
+    
+    public void acceptScore(UUID gameId, UUID playerId) {
+        try {
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(serverURL + "/api/games/" + gameId + "/negotiation/accept"))
+                    .header("Content-Type", "application/json")
+                    .header("X-Player-Id", playerId.toString())
+                    .POST(HttpRequest.BodyPublishers.noBody())
+                    .build();
+
+            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+
+            if (response.statusCode() != 200) {
+                throw new RuntimeException("Błąd akceptacji wyniku! Kod: " + response.statusCode() + ", Treść: " + response.body());
+            }
+
+        } catch (IOException | InterruptedException e) {
+            throw new RuntimeException("Błąd sieci podczas akceptacji", e);
+        }
+    }
+    
+    public void resumePlaying(UUID gameId, UUID playerId) {
+        try {
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(serverURL + "/api/games/" + gameId + "/negotiation/resume"))
+                    .header("Content-Type", "application/json")
+                    .header("X-Player-Id", playerId.toString())
+                    .POST(HttpRequest.BodyPublishers.noBody())
+                    .build();
+
+            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+
+            if (response.statusCode() != 200) {
+                throw new RuntimeException("Błąd wznowienia gry! Kod: " + response.statusCode() + ", Treść: " + response.body());
+            }
+
+        } catch (IOException | InterruptedException e) {
+            throw new RuntimeException("Błąd sieci podczas wznawiania gry", e);
+        }
+    }
+    
+    public NegotiationStateResponse toggleChainStatus(UUID gameId, UUID playerId, int chainId) {
+        try {
+            ToggleChainStatusRequest requestBody = new ToggleChainStatusRequest(chainId);
+            String jsonToSend = mapper.writeValueAsString(requestBody);
+
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(serverURL + "/api/games/" + gameId + "/negotiation/toggle"))
+                    .header("Content-Type", "application/json")
+                    .header("X-Player-Id", playerId.toString())
+                    .POST(HttpRequest.BodyPublishers.ofString(jsonToSend))
+                    .build();
+
+            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+
+            if (response.statusCode() == 200) {
+                return mapper.readValue(response.body(), NegotiationStateResponse.class);
+            } else {
+                throw new RuntimeException("Błąd zmiany statusu łańcucha! Kod: " + response.statusCode() + ", Treść: " + response.body());
+            }
+
+        } catch (IOException | InterruptedException e) {
+            throw new RuntimeException("Błąd sieci podczas zmiany statusu", e);
+        }
+    }
 }

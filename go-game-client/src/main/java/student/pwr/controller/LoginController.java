@@ -75,7 +75,7 @@ public class LoginController {
                 if ("WAITING".equals(game.status())) {
                     System.out.println("Oczekiwanie na przeciwnika...");
                     waitForOpponent(game.id());
-                } else if ("IN_PROGRESS".equals(game.status())) {
+                } else if ("IN_PROGRESS".equals(game.status()) || "NEGOTIATING".equals(game.status())) {
                     System.out.println("Gra znaleziona od razu! ID: " + game.id());
                     Platform.runLater(() -> notifyGameStarted(game));
                 }
