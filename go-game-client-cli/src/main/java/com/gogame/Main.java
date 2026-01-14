@@ -22,7 +22,7 @@ import com.gogame.websocket.GameWebSocketClient.GameEventWrapper;
  */
 public class Main {
 
-    private static final String SERVER_URL = "http://adamkulwicki.gogame:8080";
+    private static final String SERVER_URL = "http://gogame.adamkulwicki.pl:8080";
     
     public static void main(String[] args) {
         
