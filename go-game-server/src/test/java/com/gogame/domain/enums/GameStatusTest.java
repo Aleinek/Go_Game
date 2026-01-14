@@ -33,9 +33,15 @@ class GameStatusTest {
     }
 
     @Test
-    @DisplayName("should have exactly 4 values")
-    void shouldHaveExactlyFourValues() {
-        assertEquals(4, GameStatus.values().length);
+    @DisplayName("should have NEGOTIATING value")
+    void shouldHaveNegotiatingValue() {
+        assertEquals("NEGOTIATING", GameStatus.NEGOTIATING.name());
+    }
+
+    @Test
+    @DisplayName("should have exactly 5 values")
+    void shouldHaveExactlyFiveValues() {
+        assertEquals(5, GameStatus.values().length);
     }
 
     @Test
@@ -43,6 +49,7 @@ class GameStatusTest {
     void shouldReturnCorrectValueFromString() {
         assertEquals(GameStatus.WAITING_FOR_PLAYERS, GameStatus.valueOf("WAITING_FOR_PLAYERS"));
         assertEquals(GameStatus.IN_PROGRESS, GameStatus.valueOf("IN_PROGRESS"));
+        assertEquals(GameStatus.NEGOTIATING, GameStatus.valueOf("NEGOTIATING"));
         assertEquals(GameStatus.FINISHED, GameStatus.valueOf("FINISHED"));
         assertEquals(GameStatus.RESIGNED, GameStatus.valueOf("RESIGNED"));
     }
@@ -73,6 +80,7 @@ class GameStatusTest {
         GameStatus[] expectedStatuses = {
             GameStatus.WAITING_FOR_PLAYERS,  // Initial state
             GameStatus.IN_PROGRESS,          // Game running
+            GameStatus.NEGOTIATING,          // Scoring negotiation after two passes
             GameStatus.FINISHED,             // Normal end
             GameStatus.RESIGNED              // Ended by resignation
         };

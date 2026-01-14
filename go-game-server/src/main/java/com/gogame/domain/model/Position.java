@@ -21,7 +21,6 @@ public class Position {
     }
 
     public List<Position> getNeighbors() {
-        // TODO [] tutaj warto by sprawdzic czy jest valid przed dodaniem do tablicy
         List<Position> neighbors = new ArrayList<>();
         neighbors.add(new Position(x + 1, y));
         neighbors.add(new Position(x - 1, y));

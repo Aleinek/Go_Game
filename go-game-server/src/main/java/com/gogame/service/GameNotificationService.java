@@ -70,6 +70,86 @@ public class GameNotificationService {
         sendToPlayer(playerId, event);
     }
     
+    public void notifyGameEndedWithScore(UUID playerId, String reason, String winner, 
+                                          GameEventPayloads.ScoreBreakdown score) {
+        GameEventPayloads.GameEndedPayload payload = new GameEventPayloads.GameEndedPayload(
+            reason,
+            winner,
+            null,
+            score
+        );
+        
+        GameEvent event = new GameEvent(GameEvent.GAME_ENDED, payload);
+        sendToPlayer(playerId, event);
+    }
+    
+    // ==================== NEGOTIATION NOTIFICATIONS ====================
+    
+    /**
+     * Notifies a player that negotiation phase has started.
+     */
+    public void notifyNegotiationStarted(UUID playerId, List<GameEventPayloads.ChainSuggestion> chains, 
+                                          double komi) {
+        GameEventPayloads.NegotiationStartedPayload payload = 
+            new GameEventPayloads.NegotiationStartedPayload(chains, komi);
+        
+        GameEvent event = new GameEvent(GameEvent.NEGOTIATION_STARTED, payload);
+        sendToPlayer(playerId, event);
+    }
+    
+    /**
+     * Notifies a player that a chain's dead/alive status has changed.
+     */
+    public void notifyChainStatusChanged(UUID playerId, int chainId, String newStatus,
+                                          String changedBy, boolean blackAccepted, 
+                                          boolean whiteAccepted) {
+        GameEventPayloads.ChainStatusChangedPayload payload = 
+            new GameEventPayloads.ChainStatusChangedPayload(
+                chainId, newStatus, changedBy, blackAccepted, whiteAccepted
+            );
+        
+        GameEvent event = new GameEvent(GameEvent.CHAIN_STATUS_CHANGED, payload);
+        sendToPlayer(playerId, event);
+    }
+    
+    /**
+     * Notifies a player that someone accepted the score.
+     */
+    public void notifyScoreAccepted(UUID playerId, String acceptedBy, 
+                                     boolean blackAccepted, boolean whiteAccepted,
+                                     GameEventPayloads.ScoreBreakdown currentScore) {
+        GameEventPayloads.ScoreAcceptedPayload payload = 
+            new GameEventPayloads.ScoreAcceptedPayload(
+                acceptedBy, blackAccepted, whiteAccepted, currentScore
+            );
+        
+        GameEvent event = new GameEvent(GameEvent.SCORE_ACCEPTED, payload);
+        sendToPlayer(playerId, event);
+    }
+    
+    /**
+     * Notifies a player that game resumed from negotiation.
+     */
+    public void notifyGameResumed(UUID playerId, String resumedByNickname, String currentTurn) {
+        GameEventPayloads.GameResumedPayload payload = 
+            new GameEventPayloads.GameResumedPayload(resumedByNickname, currentTurn);
+        
+        GameEvent event = new GameEvent(GameEvent.GAME_RESUMED, payload);
+        sendToPlayer(playerId, event);
+    }
+    
+    /**
+     * Notifies a player about a negotiation error.
+     */
+    public void notifyNegotiationError(UUID playerId, String errorCode, String message, 
+                                        Integer chainId) {
+        GameEventPayloads.NegotiationErrorPayload payload = 
+            new GameEventPayloads.NegotiationErrorPayload(errorCode, message, chainId);
+        
+        GameEvent event = new GameEvent(GameEvent.NEGOTIATION_ERROR, payload);
+        sendToPlayer(playerId, event);
+    }
+    
     /**
      * Wysyła zdarzenie do konkretnego gracza na kanał /topic/game/{playerId}
      */

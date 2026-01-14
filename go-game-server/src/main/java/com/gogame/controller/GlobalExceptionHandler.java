@@ -2,6 +2,7 @@ package com.gogame.controller;
 
 import com.gogame.domain.exception.GameNotFoundException;
 import com.gogame.domain.exception.InvalidMoveException;
+import com.gogame.domain.exception.InvalidNegotiationException;
 import com.gogame.domain.exception.PlayerNotFoundException;
 import com.gogame.dto.response.ErrorResponse;
 import org.springframework.http.HttpStatus;
@@ -16,6 +17,15 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleInvalidMove(InvalidMoveException ex) {
         ErrorResponse error = new ErrorResponse(
             ex.getErrorCode() != null ? ex.getErrorCode().toString() : "INVALID_MOVE",
+            ex.getMessage()
+        );
+        return ResponseEntity.badRequest().body(error);
+    }
+    
+    @ExceptionHandler(InvalidNegotiationException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidNegotiation(InvalidNegotiationException ex) {
+        ErrorResponse error = new ErrorResponse(
+            ex.getErrorCode() != null ? ex.getErrorCode().toString() : "INVALID_NEGOTIATION",
             ex.getMessage()
         );
         return ResponseEntity.badRequest().body(error);

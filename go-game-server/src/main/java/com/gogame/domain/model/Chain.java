@@ -30,6 +30,10 @@ public class Chain {
         return stones;
     }
 
+    public StoneColor getColor() {
+        return color;
+    }
+
     public Chain merge(Chain other) {
         if (this.color != other.color) {
             throw new IllegalArgumentException("Cannot merge chains of different colors");

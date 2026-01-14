@@ -119,6 +119,32 @@ public class GameWebSocketClient {
                                 payloadNode, GameEndedPayload.class);
                             gameEventQueue.offer(new GameEventWrapper(eventType, ended));
                         }
+                        // Negotiation phase events
+                        case GameEvent.NEGOTIATION_STARTED -> {
+                            NegotiationStartedPayload negotiation = objectMapper.treeToValue(
+                                payloadNode, NegotiationStartedPayload.class);
+                            gameEventQueue.offer(new GameEventWrapper(eventType, negotiation));
+                        }
+                        case GameEvent.CHAIN_STATUS_CHANGED -> {
+                            ChainStatusChangedPayload changed = objectMapper.treeToValue(
+                                payloadNode, ChainStatusChangedPayload.class);
+                            gameEventQueue.offer(new GameEventWrapper(eventType, changed));
+                        }
+                        case GameEvent.SCORE_ACCEPTED -> {
+                            ScoreAcceptedPayload accepted = objectMapper.treeToValue(
+                                payloadNode, ScoreAcceptedPayload.class);
+                            gameEventQueue.offer(new GameEventWrapper(eventType, accepted));
+                        }
+                        case GameEvent.GAME_RESUMED -> {
+                            GameResumedPayload resumed = objectMapper.treeToValue(
+                                payloadNode, GameResumedPayload.class);
+                            gameEventQueue.offer(new GameEventWrapper(eventType, resumed));
+                        }
+                        case GameEvent.NEGOTIATION_ERROR -> {
+                            NegotiationErrorPayload error = objectMapper.treeToValue(
+                                payloadNode, NegotiationErrorPayload.class);
+                            gameEventQueue.offer(new GameEventWrapper(eventType, error));
+                        }
                     }
                 } catch (Exception e) {
                     System.err.println("Błąd przetwarzania zdarzenia WebSocket: " + e.getMessage());

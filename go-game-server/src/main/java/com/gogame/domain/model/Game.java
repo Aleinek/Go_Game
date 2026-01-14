@@ -15,6 +15,13 @@ public class Game {
     public GameStatus status;
     public List<Move> moves;
     public int consecutivePasses;
+    
+    // Negotiation phase fields
+    public static final double DEFAULT_KOMI = 6.5;
+    public double komi;
+    public NegotiationState negotiationState;
+    public ScoreResult finalScore;
+    public StoneColor lastPlayerBeforeNegotiation;
 
     public Game(Player blackPlayer, Player whitePlayer, Board board) {
         this.id = UUID.randomUUID();
@@ -25,6 +32,10 @@ public class Game {
         this.status = GameStatus.IN_PROGRESS;
         this.moves = new java.util.ArrayList<>();
         this.consecutivePasses = 0;
+        this.komi = DEFAULT_KOMI;
+        this.negotiationState = null;
+        this.finalScore = null;
+        this.lastPlayerBeforeNegotiation = null;
     }
 
     public void resign(Player player) {
@@ -38,12 +49,21 @@ public class Game {
     }
 
     public boolean isGameOver() {
-        return status != GameStatus.IN_PROGRESS;
+        return status == GameStatus.FINISHED || status == GameStatus.RESIGNED;
+    }
+    
+    public boolean isNegotiating() {
+        return status == GameStatus.NEGOTIATING;
     }
     
     public Player getWinner() {
         if (status == GameStatus.RESIGNED) {
             return (getCurrentPlayer() == blackPlayer) ? whitePlayer : blackPlayer;
+        }
+        if (status == GameStatus.FINISHED && finalScore != null) {
+            String winner = finalScore.getWinner();
+            if ("BLACK".equals(winner)) return blackPlayer;
+            if ("WHITE".equals(winner)) return whitePlayer;
         }
         return null;
     }
@@ -54,6 +74,38 @@ public class Game {
 
     public void switchTurn() {
         currentTurn = (currentTurn == StoneColor.BLACK) ? StoneColor.WHITE : StoneColor.BLACK;
+    }
+
+    /**
+     * Starts the negotiation phase after two consecutive passes.
+     */
+    public void startNegotiation() {
+        if (consecutivePasses >= 2) {
+            this.lastPlayerBeforeNegotiation = currentTurn;
+            this.status = GameStatus.NEGOTIATING;
+            this.negotiationState = new NegotiationState();
+        }
+    }
+
+    /**
+     * Resumes playing from negotiation phase.
+     * The player who requested resume gets the turn.
+     */
+    public void resumePlaying(StoneColor requestingPlayerColor) {
+        if (status == GameStatus.NEGOTIATING) {
+            this.status = GameStatus.IN_PROGRESS;
+            this.currentTurn = requestingPlayerColor;
+            this.consecutivePasses = 0;
+            this.negotiationState = null;
+        }
+    }
+
+    /**
+     * Ends the game with final score.
+     */
+    public void finishWithScore(ScoreResult score) {
+        this.finalScore = score;
+        this.status = GameStatus.FINISHED;
     }
 
     void checkGameEnd() {

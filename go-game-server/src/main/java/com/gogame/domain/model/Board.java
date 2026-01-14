@@ -264,6 +264,10 @@ public class Board {
         return territory;
     }
 
+    public Map<Position, Chain> getChains() {
+        return chains;
+    }
+
     public Player getBlackPlayer() {
         return blackPlayer;
     }

@@ -4,7 +4,6 @@ import java.util.Scanner;
 
 import com.gogame.dto.GamePlayer;
 import com.gogame.dto.GameResponse;
-import com.gogame.dto.PlayerResponse;
 import com.gogame.model.MoveType;
 
 
@@ -104,7 +103,6 @@ public class CLIController {
                 boardSize = scanner.nextInt();
                 if(boardSize != 9 && boardSize != 13 && boardSize != 19)
                     throw new IllegalArgumentException();
-                System.out.println("boardsize : " + boardSize);
                 break;
             } catch (Exception e) {
                 System.out.print("Prosze wprowadzic prawidlowa wielkosc planszy");
