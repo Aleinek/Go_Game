@@ -256,7 +256,7 @@ public class GameController {
         
         if (isNegotiating) {
             statusLabel.setText("NEGOTIATION PHASE");
-            statusLabel.setTextFill(Color.ORANGE);
+            statusLabel.setTextFill(Color.BLACK);
             
             setNegotiationMode(true);
             
