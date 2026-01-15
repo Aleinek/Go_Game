@@ -12,6 +12,22 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import student.pwr.dto.*;
 
+/**
+ * HTTP API controller for communicating with the Go Game server.
+ * <p>
+ * Handles all REST API calls including:
+ * <ul>
+ *   <li>Player registration</li>
+ *   <li>Game joining/matchmaking</li>
+ *   <li>Move submission</li>
+ *   <li>Board state retrieval</li>
+ *   <li>Negotiation phase operations</li>
+ * </ul>
+ * </p>
+ * 
+ * @author Go Game Team - PWR
+ * @version 1.0
+ */
 public class APIController {
 
     private final String serverURL;

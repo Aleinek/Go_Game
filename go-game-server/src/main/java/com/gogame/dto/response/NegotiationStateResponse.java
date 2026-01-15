@@ -4,7 +4,25 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Response containing the current negotiation state.
+ * Response DTO containing the current negotiation (scoring) state.
+ * <p>
+ * Includes:
+ * <ul>
+ *   <li>All chains with their positions and dead/alive status</li>
+ *   <li>Player acceptance status</li>
+ *   <li>Score preview based on current markings</li>
+ * </ul>
+ * </p>
+ * 
+ * @param gameId the game's unique identifier
+ * @param chains list of all chains on the board
+ * @param blackAccepted whether black has accepted
+ * @param whiteAccepted whether white has accepted
+ * @param komi the komi value
+ * @param scorePreview projected score based on current markings
+ * @param message optional status message
+ * @author Go Game Team
+ * @version 1.0
  */
 public record NegotiationStateResponse(
     UUID gameId,

@@ -4,7 +4,24 @@ import javafx.fxml.FXML;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.VBox;
 import student.pwr.dto.GameResponse;
+import student.pwr.websocket.GameWebSocketClient;
 
+/**
+ * Main FXML controller managing view transitions.
+ * <p>
+ * Coordinates between:
+ * <ul>
+ *   <li>{@link LoginController} - login and matchmaking view</li>
+ *   <li>{@link GameController} - game board view</li>
+ * </ul>
+ * </p>
+ * <p>
+ * Handles view switching when a game starts and cleanup on shutdown.
+ * </p>
+ * 
+ * @author Go Game Team - PWR
+ * @version 1.0
+ */
 public class UIController {
 
     private final String SERVER_URL = "http://gogame.adamkulwicki.pl:8080";
@@ -36,16 +53,30 @@ public class UIController {
         gameView.setVisible(false);
     }
 
-    private void onGameStarted(GameResponse game) {
+    private void onGameStarted(GameResponse game, GameWebSocketClient webSocketClient) {
         System.out.println("Przełączanie do widoku gry...");
         
         loginView.setVisible(false);
         gameView.setVisible(true);
 
         java.util.UUID playerId = loginViewController.getPlayerId();
+        String myColor = loginViewController.getMyColor();
 
         if (gameViewController != null) {
-            gameViewController.initGame(game, apiController, playerId);
+            gameViewController.initGame(game, apiController, playerId, webSocketClient, myColor);
+        }
+    }
+    
+    /**
+     * Wywoływane przy zamykaniu aplikacji - czyści zasoby.
+     */
+    public void shutdown() {
+        if (loginViewController != null) {
+            GameWebSocketClient wsClient = loginViewController.getWebSocketClient();
+            if (wsClient != null) {
+                wsClient.disconnect();
+                System.out.println("WebSocket rozłączony");
+            }
         }
     }
 }

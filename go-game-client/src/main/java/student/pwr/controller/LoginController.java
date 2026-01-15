@@ -1,7 +1,8 @@
 package student.pwr.controller;
 
 import java.util.UUID;
-import java.util.function.Consumer;
+import java.util.concurrent.TimeUnit;
+import java.util.function.BiConsumer;
 
 import javafx.application.Platform;
 import javafx.concurrent.Task;
@@ -14,15 +15,37 @@ import javafx.scene.control.TextField;
 import javafx.scene.control.ToggleGroup;
 import student.pwr.dto.GameResponse;
 import student.pwr.dto.PlayerResponse;
-import student.pwr.dto.WaitingStatus;
+import student.pwr.dto.websocket.GameStartedPayload;
 import student.pwr.utils.AlertUtils;
+import student.pwr.websocket.GameWebSocketClient;
 
+/**
+ * FXML controller for the login/matchmaking screen.
+ * <p>
+ * Handles:
+ * <ul>
+ *   <li>Player registration with nickname</li>
+ *   <li>Board size selection (9, 13, 19)</li>
+ *   <li>WebSocket connection establishment</li>
+ *   <li>Matchmaking and waiting for opponent</li>
+ * </ul>
+ * </p>
+ * <p>
+ * Uses WebSocket events to detect when an opponent joins,
+ * rather than polling the server.
+ * </p>
+ * 
+ * @author Go Game Team - PWR
+ * @version 1.0
+ */
 public class LoginController {
 
     private final String SERVER_URL = "http://gogame.adamkulwicki.pl:8080";
     private APIController apiController;
-    private Consumer<GameResponse> onGameStarted; 
+    private GameWebSocketClient webSocketClient;
+    private BiConsumer<GameResponse, GameWebSocketClient> onGameStarted; 
     private UUID playerId;
+    private String myColor;
 
     @FXML private TextField usernameField;
     @FXML private ToggleGroup boardSizeGroup;
@@ -34,14 +57,23 @@ public class LoginController {
     @FXML
     public void initialize() {
         apiController = new APIController(SERVER_URL);
+        webSocketClient = new GameWebSocketClient(SERVER_URL);
     }
 
-    public void setOnGameStarted(Consumer<GameResponse> onGameStarted) {
+    public void setOnGameStarted(BiConsumer<GameResponse, GameWebSocketClient> onGameStarted) {
         this.onGameStarted = onGameStarted;
     }
 
     public UUID getPlayerId() {
         return playerId;
+    }
+    
+    public String getMyColor() {
+        return myColor;
+    }
+    
+    public GameWebSocketClient getWebSocketClient() {
+        return webSocketClient;
     }
 
     @FXML
@@ -67,16 +99,27 @@ public class LoginController {
                 PlayerResponse player = apiController.registerPlayer(nickname);
                 this.playerId = player.id();
                 
+                // Połącz WebSocket PRZED dołączeniem do kolejki
+                Platform.runLater(() -> searchGameButton.setText("Connecting WebSocket..."));
+                webSocketClient.connect(playerId);
+                System.out.println("WebSocket połączony dla gracza: " + playerId);
+                
                 Platform.runLater(() -> searchGameButton.setText("Searching for game..."));
 
                 System.out.println("Dołączanie do gry, rozmiar: " + finalBoardSize);
                 GameResponse game = apiController.joinGame(playerId, finalBoardSize);
 
                 if ("WAITING".equals(game.status())) {
-                    System.out.println("Oczekiwanie na przeciwnika...");
-                    waitForOpponent(game.id());
+                    System.out.println("Oczekiwanie na przeciwnika przez WebSocket...");
+                    waitForOpponentViaWebSocket(game.id());
                 } else if ("IN_PROGRESS".equals(game.status()) || "NEGOTIATING".equals(game.status())) {
                     System.out.println("Gra znaleziona od razu! ID: " + game.id());
+                    // Ustal kolor gracza
+                    if (game.blackPlayer() != null && game.blackPlayer().id().equals(playerId)) {
+                        this.myColor = "BLACK";
+                    } else {
+                        this.myColor = "WHITE";
+                    }
                     Platform.runLater(() -> notifyGameStarted(game));
                 }
 
@@ -91,19 +134,28 @@ public class LoginController {
         }).start();
     }
 
-    private void waitForOpponent(UUID waitingId) {
+    /**
+     * Czeka na przeciwnika przez WebSocket zamiast pollingu HTTP.
+     */
+    private void waitForOpponentViaWebSocket(UUID waitingId) {
         Task<Void> task = new Task<>() {
             @Override
             protected Void call() throws Exception {
-                WaitingStatus status;
-                do {
-                    Thread.sleep(1000);
-                    status = apiController.checkWaitingStatus(waitingId);
-                    System.out.print(".");
-                } while ("WAITING".equals(status.status()));
-
-                UUID foundGameId = status.gameId();
-                GameResponse game = apiController.fetchGameStatus(foundGameId);
+                GameStartedPayload gameStarted = null;
+                
+                // Czekaj na event GAME_STARTED przez WebSocket
+                while (gameStarted == null) {
+                    gameStarted = webSocketClient.waitForGameStart(2, TimeUnit.SECONDS);
+                    if (gameStarted == null) {
+                        System.out.print(".");
+                    }
+                }
+                
+                System.out.println("\nGra rozpoczęta! ID: " + gameStarted.gameId());
+                myColor = gameStarted.yourColor();
+                
+                // Pobierz pełny stan gry przez REST
+                GameResponse game = apiController.fetchGameStatus(gameStarted.gameId());
                 
                 Platform.runLater(() -> notifyGameStarted(game));
                 return null;
@@ -123,7 +175,7 @@ public class LoginController {
 
     private void notifyGameStarted(GameResponse game) {
         if (onGameStarted != null) {
-            onGameStarted.accept(game);
+            onGameStarted.accept(game, webSocketClient);
         }
     }
 }

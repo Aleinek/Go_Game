@@ -20,6 +20,25 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
+/**
+ * Core service for game management and logic.
+ * <p>
+ * Handles all game operations including:
+ * <ul>
+ *   <li>Game creation and matchmaking</li>
+ *   <li>Move validation and execution</li>
+ *   <li>Pass and resignation handling</li>
+ *   <li>Scoring negotiation phase management</li>
+ *   <li>WebSocket notifications to players</li>
+ * </ul>
+ * </p>
+ * <p>
+ * Games are stored in memory using ConcurrentHashMap for thread-safety.
+ * </p>
+ * 
+ * @author Go Game Team
+ * @version 1.0
+ */
 @Service
 public class GameService {
     

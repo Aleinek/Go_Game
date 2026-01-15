@@ -8,14 +8,35 @@ import java.util.Objects;
 import java.util.Set;
 
 /**
- * Represents information about a chain during negotiation phase.
- * Contains an identifier, positions of stones, color, and dead/alive status.
+ * Represents information about a chain during the negotiation (scoring) phase.
+ * <p>
+ * Contains:
+ * <ul>
+ *   <li>Unique chain identifier</li>
+ *   <li>Positions of all stones in the chain</li>
+ *   <li>Stone color</li>
+ *   <li>Dead/Alive status (can be toggled during negotiation)</li>
+ *   <li>Liberty count</li>
+ * </ul>
+ * </p>
+ * <p>
+ * During negotiation, players can mark chains as DEAD or ALIVE.
+ * Dead chains count as prisoners for the opponent's score.
+ * </p>
+ * 
+ * @author Go Game Team
+ * @version 1.0
  */
 public class ChainInfo {
+    /** Unique identifier for this chain during negotiation. */
     private final int chainId;
+    /** Set of board positions occupied by this chain's stones. */
     private final Set<Position> positions;
+    /** Color of stones in this chain. */
     private final StoneColor color;
+    /** Whether this chain is marked as DEAD or ALIVE. */
     private DeadStoneStatus status;
+    /** Number of liberties this chain has. */
     private final int liberties;
 
     public ChainInfo(int chainId, Chain chain, int liberties) {

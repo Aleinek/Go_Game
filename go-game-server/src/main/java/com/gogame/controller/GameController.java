@@ -15,6 +15,21 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
+/**
+ * REST controller handling game operations for Go.
+ * <p>
+ * Provides endpoints for:
+ * <ul>
+ *   <li>Joining/creating games via matchmaking queue</li>
+ *   <li>Making moves and passing</li>
+ *   <li>Resigning from games</li>
+ *   <li>Fetching game and board state</li>
+ * </ul>
+ * </p>
+ * 
+ * @author Go Game Team
+ * @version 1.0
+ */
 @RestController
 @RequestMapping("/api/games")
 public class GameController {
@@ -30,6 +45,17 @@ public class GameController {
 
     private record WaitingGame(UUID playerId, int boardSize, UUID actualGameId) {}
 
+    /**
+     * Joins a game or enters the matchmaking queue.
+     * <p>
+     * If another player is waiting for the same board size, creates a new game.
+     * Otherwise, adds the player to the waiting queue.
+     * </p>
+     * 
+     * @param playerId the UUID of the player from X-Player-Id header
+     * @param request contains the desired board size (9, 13, or 19)
+     * @return CREATED (201) with game details, or ACCEPTED (202) if waiting
+     */
     @PostMapping("/join")
     public ResponseEntity<GameResponse> joinGame(
             @RequestHeader("X-Player-Id") UUID playerId,
@@ -71,6 +97,16 @@ public class GameController {
         }
     }
 
+    /**
+     * Checks the status of a waiting game request.
+     * <p>
+     * Used for polling until an opponent is found. Returns MATCHED with gameId
+     * when a game has started, or WAITING if still in queue.
+     * </p>
+     * 
+     * @param waitingGameId the UUID of the waiting request
+     * @return status object with MATCHED/WAITING and optional gameId
+     */
     @GetMapping("/waiting/{waitingGameId}")
     public ResponseEntity<Map<String, Object>> checkWaitingStatus(@PathVariable UUID waitingGameId) {
         WaitingGame waitingGame = waitingGames.get(waitingGameId);
@@ -94,12 +130,28 @@ public class GameController {
         return ResponseEntity.ok(response);
     }
 
+    /**
+     * Retrieves the current state of a game.
+     * 
+     * @param id the game UUID
+     * @return game details including status, players, and turn information
+     * @throws GameNotFoundException if game doesn't exist
+     */
     @GetMapping("/{id}")
     public ResponseEntity<GameResponse> getGame(@PathVariable UUID id) {
         GameResponse response = gameService.getGame(id);
         return ResponseEntity.ok(response);
     }
 
+    /**
+     * Places a stone on the board.
+     * 
+     * @param id the game UUID
+     * @param playerId the player making the move
+     * @param request contains x and y coordinates
+     * @return move result with captured stones and new board state
+     * @throws InvalidMoveException if move is illegal (occupied, ko, suicide, etc.)
+     */
     @PostMapping("/{id}/move")
     public ResponseEntity<MoveResponse> makeMove(
             @PathVariable UUID id,
@@ -110,13 +162,28 @@ public class GameController {
         return ResponseEntity.ok(response);
     }
 
+    /**
+     * Retrieves all moves made in the game.
+     * 
+     * @param id the game UUID
+     * @return list of all moves with coordinates, colors, and timestamps
+     */
     @GetMapping("/{id}/moves")
-    // gets all moves made so far in the game by both players on {id}
     public ResponseEntity<MovesListResponse> getMoves(@PathVariable UUID id) {
         MovesListResponse response = gameService.getMoves(id);
         return ResponseEntity.ok(response);
     }
 
+    /**
+     * Passes the turn without placing a stone.
+     * <p>
+     * Two consecutive passes trigger the scoring negotiation phase.
+     * </p>
+     * 
+     * @param id the game UUID
+     * @param playerId the player passing
+     * @return move response indicating pass was recorded
+     */
     @PostMapping("/{id}/pass")
     public ResponseEntity<MoveResponse> pass(
             @PathVariable UUID id,
@@ -126,6 +193,13 @@ public class GameController {
         return ResponseEntity.ok(response);
     }
 
+    /**
+     * Resigns from the game, forfeiting to the opponent.
+     * 
+     * @param id the game UUID
+     * @param playerId the player resigning
+     * @return updated game state with RESIGNED status
+     */
     @PostMapping("/{id}/resign")
     public ResponseEntity<GameResponse> resign(
             @PathVariable UUID id,
@@ -135,6 +209,12 @@ public class GameController {
         return ResponseEntity.ok(response);
     }
 
+    /**
+     * Retrieves the current board state.
+     * 
+     * @param id the game UUID
+     * @return board with all stones, captured counts, and territory
+     */
     @GetMapping("/{id}/board")
     public ResponseEntity<BoardResponse> getBoard(@PathVariable UUID id) {
         BoardResponse response = gameService.getBoard(id);

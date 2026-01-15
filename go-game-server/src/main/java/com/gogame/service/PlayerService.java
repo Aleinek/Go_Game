@@ -10,6 +10,16 @@ import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
+/**
+ * Service for player management operations.
+ * <p>
+ * Handles player registration, retrieval, and token validation.
+ * Players are stored in memory with unique nicknames.
+ * </p>
+ * 
+ * @author Go Game Team
+ * @version 1.0
+ */
 @Service
 public class PlayerService {
     
@@ -18,6 +28,13 @@ public class PlayerService {
     private final Map<UUID, String> tokens = new ConcurrentHashMap<>();
     private final Map<UUID, Instant> createdAt = new ConcurrentHashMap<>();
     
+    /**
+     * Creates a new player with the given nickname.
+     * 
+     * @param request contains the desired nickname
+     * @return PlayerResponse with ID, nickname, token, and creation time
+     * @throws IllegalArgumentException if nickname is already taken
+     */
     public PlayerResponse createPlayer(CreatePlayerRequest request) {
         if (nicknameToId.containsKey(request.nickname())) {
             throw new IllegalArgumentException("Nickname '" + request.nickname() + "' is already taken");
@@ -37,6 +54,13 @@ public class PlayerService {
         return new PlayerResponse(playerId, request.nickname(), token, now);
     }
     
+    /**
+     * Retrieves a player by ID.
+     * 
+     * @param playerId the player's UUID
+     * @return the Player entity
+     * @throws PlayerNotFoundException if player doesn't exist
+     */
     public Player getPlayer(UUID playerId) {
         Player player = players.get(playerId);
         if (player == null) {
@@ -45,6 +69,12 @@ public class PlayerService {
         return player;
     }
     
+    /**
+     * Retrieves player information as a response DTO.
+     * 
+     * @param playerId the player's UUID
+     * @return PlayerResponse with player details
+     */
     public PlayerResponse getPlayerResponse(UUID playerId) {
         Player player = getPlayer(playerId);
         return new PlayerResponse(
@@ -55,11 +85,23 @@ public class PlayerService {
         );
     }
     
+    /**
+     * Validates a player's authentication token.
+     * 
+     * @param playerId the player's UUID
+     * @param token the token to validate
+     * @return true if the token matches
+     */
     public boolean validateToken(UUID playerId, String token) {
         String storedToken = tokens.get(playerId);
         return storedToken != null && storedToken.equals(token);
     }
     
+    /**
+     * Retrieves all registered players.
+     * 
+     * @return list of all Player entities
+     */
     public List<Player> getAllPlayers() {
         return new ArrayList<>(players.values());
     }
@@ -68,6 +110,14 @@ public class PlayerService {
         return "token_" + playerId.toString() + "_" + UUID.randomUUID().toString().substring(0, 8);
     }
     
+    /**
+     * Resets a player's captured stone count.
+     * <p>
+     * Used when starting a new game.
+     * </p>
+     * 
+     * @param playerId the player's UUID
+     */
     public void resetCapturedStones(UUID playerId) {
         getPlayer(playerId);
     }

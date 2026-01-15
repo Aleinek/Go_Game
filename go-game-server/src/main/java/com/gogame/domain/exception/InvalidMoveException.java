@@ -4,19 +4,34 @@ import com.gogame.domain.model.Position;
 
 /**
  * Exception thrown when an invalid move is attempted in a Go game.
+ * <p>
+ * Go has strict rules about valid moves. This exception captures
+ * various violation types with specific error codes.
+ * </p>
+ * 
+ * @author Go Game Team
+ * @version 1.0
  */
 public class InvalidMoveException extends RuntimeException {
 
     /**
-     * Error codes for invalid moves
+     * Error codes for different types of invalid moves.
+     * Each code includes a human-readable description.
      */
     public enum ErrorCode {
+        /** Attempting to place a stone on an occupied intersection. */
         POSITION_OCCUPIED("Position is already occupied"),
+        /** Attempting to place a stone outside the board boundaries. */
         OUT_OF_BOUNDS("Position is outside the board boundaries"),
+        /** Player attempting to move out of turn. */
         NOT_YOUR_TURN("It is not your turn to play"),
+        /** Move would result in immediate capture with no captures. */
         SUICIDE_MOVE("Move would result in immediate capture (suicide)"),
+        /** Move would recreate previous board position (Ko). */
         KO_VIOLATION("Move violates the Ko rule"),
+        /** Game is not in IN_PROGRESS state. */
         GAME_NOT_IN_PROGRESS("Game is not in progress"),
+        /** Invalid position coordinates provided. */
         INVALID_POSITION("Invalid position coordinates");
 
         private final String description;

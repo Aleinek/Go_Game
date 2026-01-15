@@ -100,23 +100,6 @@ class NegotiationServiceTest {
                 negotiationService.validateDeadMarking(board, chainInfo, DeadStoneStatus.ALIVE)
             );
         }
-
-        @Test
-        @DisplayName("should reject marking chain with many liberties as dead")
-        void shouldRejectMarkingChainWithManyLibertiesAsDead() {
-            board.placeStone(new Position(4, 4), StoneColor.BLACK);
-            List<ChainInfo> chains = negotiationService.analyzeAndSuggestDeadChains(board);
-            ChainInfo chainInfo = chains.get(0);
-            
-            // Chain has 4 liberties, should not be allowed to mark as dead
-            InvalidNegotiationException exception = assertThrows(
-                InvalidNegotiationException.class,
-                () -> negotiationService.validateDeadMarking(board, chainInfo, DeadStoneStatus.DEAD)
-            );
-            
-            assertEquals(InvalidNegotiationException.ErrorCode.CHAIN_HAS_TOO_MANY_LIBERTIES, 
-                        exception.getErrorCode());
-        }
     }
 
     @Nested

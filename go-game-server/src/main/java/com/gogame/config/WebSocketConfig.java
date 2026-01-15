@@ -6,6 +6,24 @@ import org.springframework.web.socket.config.annotation.EnableWebSocketMessageBr
 import org.springframework.web.socket.config.annotation.StompEndpointRegistry;
 import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerConfigurer;
 
+/**
+ * WebSocket configuration for real-time game event notifications.
+ * <p>
+ * Configures STOMP over WebSocket with SockJS fallback for browsers
+ * that don't support native WebSocket connections.
+ * </p>
+ * <p>
+ * Message flow:
+ * <ul>
+ *   <li>Clients subscribe to {@code /topic/game/{playerId}} for game events</li>
+ *   <li>Server publishes events like GAME_STARTED, OPPONENT_MOVED, etc.</li>
+ *   <li>Client-to-server messages use {@code /app} prefix</li>
+ * </ul>
+ * </p>
+ * 
+ * @author Go Game Team
+ * @version 1.0
+ */
 @Configuration
 @EnableWebSocketMessageBroker
 public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {

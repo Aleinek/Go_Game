@@ -13,6 +13,26 @@ import com.gogame.domain.enums.StoneColor;
 import com.gogame.domain.exception.InvalidMoveException;
 import com.gogame.domain.exception.InvalidMoveException.ErrorCode;
 
+/**
+ * Represents the Go game board and provides core game logic.
+ * <p>
+ * The board is a square grid (typically 9x9, 13x13, or 19x19) where
+ * stones can be placed at intersections.
+ * </p>
+ * <p>
+ * Key responsibilities:
+ * <ul>
+ *   <li>Managing stone placement with full rule validation</li>
+ *   <li>Tracking chains (connected groups of same-color stones)</li>
+ *   <li>Handling captures when chains lose all liberties</li>
+ *   <li>Enforcing the Ko rule to prevent infinite loops</li>
+ *   <li>Detecting suicide moves</li>
+ * </ul>
+ * </p>
+ * 
+ * @author Go Game Team
+ * @version 1.0
+ */
 public class Board {
     private final int size;
     private final Stone[][] grid;

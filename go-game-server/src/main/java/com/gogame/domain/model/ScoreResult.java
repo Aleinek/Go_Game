@@ -2,19 +2,43 @@ package com.gogame.domain.model;
 
 /**
  * Final scoring result for a Go game using Japanese rules.
- * Score = Territory + Prisoners (captured during game) + Dead stones - Komi (for white)
+ * <p>
+ * Japanese scoring formula:
+ * <ul>
+ *   <li>Black's score = Black territory + prisoners captured by black + white dead stones</li>
+ *   <li>White's score = White territory + prisoners captured by white + black dead stones + komi</li>
+ * </ul>
+ * </p>
+ * <p>
+ * Komi is compensation for white playing second (typically 6.5 points).
+ * The 0.5 ensures no ties in official games.
+ * </p>
+ * 
+ * @author Go Game Team
+ * @version 1.0
  */
 public class ScoreResult {
+    /** Territory points controlled by black. */
     private final int blackTerritory;
+    /** Territory points controlled by white. */
     private final int whiteTerritory;
-    private final int blackPrisoners;      // Stones captured by black during game
-    private final int whitePrisoners;      // Stones captured by white during game
-    private final int blackDeadStones;     // Black stones marked dead in negotiation
-    private final int whiteDeadStones;     // White stones marked dead in negotiation
+    /** Stones captured by black during the game (prisoners). */
+    private final int blackPrisoners;
+    /** Stones captured by white during the game (prisoners). */
+    private final int whitePrisoners;
+    /** Black stones marked dead in negotiation (count for white). */
+    private final int blackDeadStones;
+    /** White stones marked dead in negotiation (count for black). */
+    private final int whiteDeadStones;
+    /** Komi compensation for white. */
     private final double komi;
+    /** Black's total score. */
     private final double blackTotal;
+    /** White's total score (includes komi). */
     private final double whiteTotal;
+    /** Winner: "BLACK", "WHITE", or "TIE". */
     private final String winner;
+    /** Absolute difference between scores. */
     private final double scoreDifference;
 
     public ScoreResult(int blackTerritory, int whiteTerritory, 

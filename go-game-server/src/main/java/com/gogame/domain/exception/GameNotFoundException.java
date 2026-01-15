@@ -3,9 +3,20 @@ import java.util.UUID;
 
 /**
  * Exception thrown when a game with the specified ID cannot be found.
+ * <p>
+ * This typically occurs when:
+ * <ul>
+ *   <li>A player tries to access a game that has ended</li>
+ *   <li>An invalid game ID is provided in the request</li>
+ *   <li>The game was never created</li>
+ * </ul>
+ * </p>
+ * 
+ * @author Go Game Team
+ * @version 1.0
  */
 public class GameNotFoundException extends RuntimeException {
-
+    /** The game ID that was not found. */
     private final UUID gameId;
 
     public GameNotFoundException(UUID gameId) {

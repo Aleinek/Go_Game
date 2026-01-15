@@ -6,6 +6,31 @@ import java.util.UUID;
 import com.gogame.domain.enums.GameStatus;
 import com.gogame.domain.enums.StoneColor;
 
+/**
+ * Represents a Go game instance with all its state.
+ * <p>
+ * A Game contains:
+ * <ul>
+ *   <li>Two players (black and white)</li>
+ *   <li>A board with the current stone positions</li>
+ *   <li>Move history</li>
+ *   <li>Game status (IN_PROGRESS, NEGOTIATING, FINISHED, RESIGNED)</li>
+ *   <li>Scoring data (komi, negotiation state, final score)</li>
+ * </ul>
+ * </p>
+ * <p>
+ * The game lifecycle:
+ * <ol>
+ *   <li>Created when matchmaking pairs two players</li>
+ *   <li>IN_PROGRESS - players take turns placing stones</li>
+ *   <li>NEGOTIATING - both passed, determining dead stones</li>
+ *   <li>FINISHED - score calculated and winner determined</li>
+ * </ol>
+ * </p>
+ * 
+ * @author Go Game Team
+ * @version 1.0
+ */
 public class Game {
     public UUID id;
     public Board board;

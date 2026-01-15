@@ -3,8 +3,24 @@ package com.gogame.domain.model;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Represents a position (intersection) on the Go board.
+ * <p>
+ * Positions use 0-based coordinates where (0,0) is the top-left corner.
+ * The x-axis increases rightward, y-axis increases downward.
+ * </p>
+ * <p>
+ * This class is immutable and properly implements {@code equals()} and 
+ * {@code hashCode()} for use in collections.
+ * </p>
+ * 
+ * @author Go Game Team
+ * @version 1.0
+ */
 public class Position {
+    /** The x-coordinate (column) on the board. */
     private final int x;
+    /** The y-coordinate (row) on the board. */
     private final int y;
 
     public Position(int x, int y) {

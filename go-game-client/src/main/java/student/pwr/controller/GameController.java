@@ -15,15 +15,39 @@ import student.pwr.dto.GameResponse;
 import student.pwr.dto.StoneDTO;
 import student.pwr.dto.MoveResponse;
 import student.pwr.dto.NegotiationStateResponse;
+import student.pwr.dto.websocket.*;
 import student.pwr.utils.AlertUtils;
+import student.pwr.websocket.GameWebSocketClient;
+import student.pwr.websocket.GameWebSocketClient.GameEventWrapper;
+
 import java.util.UUID;
 import java.util.Set;
 import java.util.HashSet;
-import java.util.stream.Collectors;
+import java.util.concurrent.TimeUnit;
 
 import student.pwr.dto.ScoreResponse;
 import javafx.scene.control.Alert;
 
+/**
+ * FXML controller for the game board view.
+ * <p>
+ * Manages:
+ * <ul>
+ *   <li>Drawing and updating the Go board</li>
+ *   <li>Handling player moves (click to place stone)</li>
+ *   <li>Pass, resign, and negotiation actions</li>
+ *   <li>WebSocket event processing for real-time updates</li>
+ *   <li>Score display and territory visualization</li>
+ * </ul>
+ * </p>
+ * <p>
+ * Uses an event-driven game loop that listens for WebSocket events
+ * rather than polling the server.
+ * </p>
+ * 
+ * @author Go Game Team - PWR
+ * @version 1.0
+ */
 public class GameController {
 
     @FXML private Pane gameHeader;
@@ -40,6 +64,7 @@ public class GameController {
     @FXML private Button resignButton;
     
     private APIController apiController;
+    private GameWebSocketClient webSocketClient;
     private GameResponse currentGame;
     private UUID myPlayerId;
     private String myColor; 
@@ -51,21 +76,29 @@ public class GameController {
     // Negotiation state
     private NegotiationStateResponse currentNegotiation;
     private boolean isNegotiating = false;
+    
+    // Game loop control
+    private volatile boolean gameLoopRunning = false;
 
     @FXML
     public void initialize() {
         System.out.println("Kontroler gry zainicjalizowany");
     }
 
-    public void initGame(GameResponse game, APIController api, UUID playerId) {
+    public void initGame(GameResponse game, APIController api, UUID playerId, GameWebSocketClient wsClient, String color) {
         this.apiController = api;
+        this.webSocketClient = wsClient;
         this.currentGame = game;
         this.myPlayerId = playerId;
+        this.myColor = color;
         
-        if (game.blackPlayer() != null && game.blackPlayer().id().equals(playerId)) {
-            this.myColor = "BLACK";
-        } else {
-            this.myColor = "WHITE";
+        // Fallback jeśli kolor nie został przekazany
+        if (this.myColor == null) {
+            if (game.blackPlayer() != null && game.blackPlayer().id().equals(playerId)) {
+                this.myColor = "BLACK";
+            } else {
+                this.myColor = "WHITE";
+            }
         }
 
         // Print URLs for debugging
@@ -73,13 +106,19 @@ public class GameController {
         System.out.println("--- DEBUG LINKS ---");
         System.out.println("Game Status: " + baseUrl + "/api/games/" + game.id());
         System.out.println("Board Status: " + baseUrl + "/api/games/" + game.id() + "/board");
+        System.out.println("WebSocket connected: " + (wsClient != null && wsClient.isConnected()));
         System.out.println("-------------------");
 
         this.boardSize = game.boardSize();
         drawBoardGrid();
         
-        // Start game loop
-        startGameLoop();
+        // Wyczyść kolejkę eventów przed startem pętli
+        if (webSocketClient != null) {
+            webSocketClient.clearQueues();
+        }
+        
+        // Start game loop z WebSocket
+        startWebSocketGameLoop();
     }
 
     private void drawBoardGrid() {
@@ -155,10 +194,7 @@ public class GameController {
                      try {
                          NegotiationStateResponse newState = apiController.toggleChainStatus(currentGame.id(), myPlayerId, chainId);
                          this.currentNegotiation = newState; // Optimistic update
-                         Platform.runLater(() -> {
-                             // Force refresh logic
-                             refreshGameState();
-                         });
+                         Platform.runLater(this::refreshGameState);
                      } catch (Exception e) {
                          e.printStackTrace();
                      }
@@ -184,7 +220,7 @@ public class GameController {
                         isMyTurn = false;
                         statusLabel.setText("Opponent's turn...");
                     });
-                    // Refresh game state immediately
+                    // Refresh game state immediately after own move
                     refreshGameState();
                 } else {
                     Platform.runLater(() -> AlertUtils.showAlert("Error", "Invalid move!"));
@@ -196,21 +232,48 @@ public class GameController {
         }).start();
     }
 
-    private void startGameLoop() {
+    /**
+     * Event-driven game loop using WebSocket events.
+     * Replaces polling with blocking wait for WebSocket events.
+     */
+    private void startWebSocketGameLoop() {
+        gameLoopRunning = true;
+        
         Task<Void> gameLoopTask = new Task<>() {
             @Override
             protected Void call() throws Exception {
-                while (true) {
-                    // Stop loop if game is finished (not IN_PROGRESS and not NEGOTIATION)
+                // Initial state refresh
+                refreshGameState();
+                
+                while (gameLoopRunning) {
+                    // Check if game is finished
                     String status = currentGame.status();
-                    if (currentGame != null 
-                            && ("RESIGNED".equals(status) || "FINISHED".equals(status))) {
+                    if ("RESIGNED".equals(status) || "FINISHED".equals(status)) {
                         Platform.runLater(() -> handleGameEnd(currentGame));
                         break;
                     }
-
-                    refreshGameState();
-                    Thread.sleep(1000); 
+                    
+                    // If it's my turn, just wait for events (my own actions trigger refreshes)
+                    // If it's opponent's turn, wait for WebSocket event
+                    if (!isMyTurn || isNegotiating) {
+                        // Wait for WebSocket event (with timeout for fallback)
+                        GameEventWrapper event = webSocketClient.waitForGameEvent(30, TimeUnit.SECONDS);
+                        
+                        if (event != null) {
+                            handleWebSocketEvent(event);
+                        } else {
+                            // Timeout - fallback refresh via REST
+                            System.out.println("WebSocket timeout, falling back to REST refresh");
+                            refreshGameState();
+                        }
+                    } else {
+                        // It's my turn - just poll for events without blocking
+                        GameEventWrapper event = webSocketClient.pollGameEvent();
+                        if (event != null) {
+                            handleWebSocketEvent(event);
+                        }
+                        Thread.sleep(100); // Small delay to prevent busy loop
+                    }
                 }
                 return null;
             }
@@ -219,6 +282,95 @@ public class GameController {
         Thread thread = new Thread(gameLoopTask);
         thread.setDaemon(true);
         thread.start();
+    }
+    
+    /**
+     * Handles incoming WebSocket events and updates UI accordingly.
+     */
+    private void handleWebSocketEvent(GameEventWrapper event) {
+        System.out.println("WebSocket event received: " + event.type());
+        
+        switch (event.type()) {
+            case GameEvent.OPPONENT_MOVED -> {
+                OpponentMovedPayload moved = (OpponentMovedPayload) event.payload();
+                System.out.println("Opponent moved! Turn: " + moved.currentTurn());
+                refreshGameState();
+            }
+            case GameEvent.OPPONENT_PASSED -> {
+                OpponentPassedPayload passed = (OpponentPassedPayload) event.payload();
+                System.out.println("Opponent passed! Consecutive passes: " + passed.consecutivePasses());
+                Platform.runLater(() -> 
+                    statusLabel.setText("Opponent passed (" + passed.consecutivePasses() + " passes)")
+                );
+                refreshGameState();
+            }
+            case GameEvent.NEGOTIATION_STARTED -> {
+                NegotiationStartedPayload negotiation = (NegotiationStartedPayload) event.payload();
+                System.out.println("Negotiation started!");
+                refreshGameState();
+            }
+            case GameEvent.CHAIN_STATUS_CHANGED -> {
+                ChainStatusChangedPayload changed = (ChainStatusChangedPayload) event.payload();
+                System.out.println("Chain " + changed.chainId() + " status changed to: " + changed.newStatus());
+                refreshGameState();
+            }
+            case GameEvent.SCORE_ACCEPTED -> {
+                ScoreAcceptedPayload accepted = (ScoreAcceptedPayload) event.payload();
+                System.out.println("Score accepted by: " + accepted.acceptedBy());
+                refreshGameState();
+            }
+            case GameEvent.GAME_RESUMED -> {
+                GameResumedPayload resumed = (GameResumedPayload) event.payload();
+                System.out.println("Game resumed by: " + resumed.resumedBy());
+                refreshGameState();
+            }
+            case GameEvent.GAME_ENDED -> {
+                GameEndedPayload ended = (GameEndedPayload) event.payload();
+                System.out.println("Game ended! Reason: " + ended.reason() + ", Winner: " + ended.winner());
+                gameLoopRunning = false;
+                // Refresh to get final state, then handle end
+                try {
+                    GameResponse finalGame = apiController.fetchGameStatus(currentGame.id());
+                    this.currentGame = finalGame;
+                    Platform.runLater(() -> handleGameEnd(finalGame));
+                } catch (Exception e) {
+                    Platform.runLater(() -> handleGameEndFromEvent(ended));
+                }
+            }
+            case GameEvent.NEGOTIATION_ERROR -> {
+                NegotiationErrorPayload error = (NegotiationErrorPayload) event.payload();
+                Platform.runLater(() -> 
+                    AlertUtils.showAlert("Negotiation Error", error.message())
+                );
+            }
+        }
+    }
+    
+    /**
+     * Handle game end from WebSocket event when REST fails.
+     */
+    private void handleGameEndFromEvent(GameEndedPayload ended) {
+        gameLoopRunning = false;
+        setNegotiationMode(false);
+        isMyTurn = false;
+        statusLabel.setText("Game Over: " + ended.reason());
+        statusLabel.setTextFill(Color.BLACK);
+        
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+        alert.setTitle("Game Over");
+        alert.setHeaderText("Winner: " + ended.winner());
+        
+        if (ended.score() != null) {
+            var score = ended.score();
+            alert.setContentText(String.format(
+                "Black Total: %.1f\nWhite Total: %.1f\nScore Difference: %.1f",
+                score.blackTotal(), score.whiteTotal(), score.scoreDifference()
+            ));
+        } else if (ended.resignedBy() != null) {
+            alert.setContentText("Resigned by: " + ended.resignedBy());
+        }
+        
+        alert.showAndWait();
     }
 
     private void refreshGameState() {

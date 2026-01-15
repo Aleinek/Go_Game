@@ -11,13 +11,25 @@ import java.util.*;
 
 /**
  * Service handling the scoring negotiation phase of a Go game.
- * Implements Japanese rules: Territory + Prisoners + Dead stones - Komi
+ * <p>
+ * Implements Japanese rules scoring: Territory + Prisoners + Dead stones - Komi
+ * </p>
+ * <p>
+ * The negotiation flow:
+ * <ol>
+ *   <li>Game enters NEGOTIATING state after both players pass</li>
+ *   <li>Service analyzes board and suggests dead chains using heuristics</li>
+ *   <li>Players can mark chains as DEAD or ALIVE</li>
+ *   <li>Both players must accept the marking before final scoring</li>
+ *   <li>Final score is calculated and winner determined</li>
+ * </ol>
+ * </p>
+ * 
+ * @author Go Game Team
+ * @version 1.0
  */
 @Service
 public class NegotiationService {
-
-    // Validation thresholds for dead stone marking
-    private static final int MAX_LIBERTIES_FOR_DEAD = 3;
 
     /**
      * Analyzes the board and suggests chains that are likely dead.
@@ -58,9 +70,21 @@ public class NegotiationService {
 
     /**
      * Heuristic to determine if a chain is likely dead.
+     * <p>
      * A chain is considered likely dead if:
-     * - It has 2 or fewer liberties AND
-     * - It is surrounded primarily by opponent stones
+     * <ul>
+     *   <li>It has 2 or fewer liberties AND</li>
+     *   <li>It is surrounded primarily by opponent stones</li>
+     * </ul>
+     * </p>
+     * <p>
+     * This is just a suggestion - players can override during negotiation.
+     * </p>
+     * 
+     * @param board the current board state
+     * @param chain the chain to evaluate
+     * @param liberties the chain's liberty count
+     * @return true if the chain appears to be dead
      */
     private boolean isLikelyDead(Board board, Chain chain, int liberties) {
         if (liberties > 2) {
@@ -94,7 +118,7 @@ public class NegotiationService {
 
     /**
      * Validates whether marking a chain as dead is logical.
-     * Blocks clearly illogical markings.
+     * All markings are now allowed - players have full control during negotiation.
      * 
      * @param board the current board
      * @param chainInfo the chain to validate
@@ -102,57 +126,8 @@ public class NegotiationService {
      * @throws InvalidNegotiationException if the marking is clearly invalid
      */
     public void validateDeadMarking(Board board, ChainInfo chainInfo, DeadStoneStatus proposedStatus) {
-        if (proposedStatus != DeadStoneStatus.DEAD) {
-            // Marking as ALIVE is always allowed
-            return;
-        }
-
-        int liberties = chainInfo.getLiberties();
-        
-        // Rule 1: Cannot mark chains with many liberties as dead
-        if (liberties > MAX_LIBERTIES_FOR_DEAD) {
-            throw new InvalidNegotiationException(
-                InvalidNegotiationException.ErrorCode.CHAIN_HAS_TOO_MANY_LIBERTIES,
-                chainInfo.getChainId()
-            );
-        }
-
-        // Rule 2: Check if chain is actually surrounded by opponent
-        StoneColor chainColor = chainInfo.getColor();
-        boolean hasSurroundingEnemy = false;
-        boolean hasSurroundingAlly = false;
-        
-        // Find the actual chain on the board
-        for (Position pos : chainInfo.getPositions()) {
-            Chain actualChain = board.getChainAt(pos);
-            if (actualChain != null) {
-                Set<Chain> enemies = board.getEnemyNeighbouringChainsSet(pos, chainColor);
-                Set<Chain> allies = board.getAllyNeighbouringChainsSet(pos, chainColor);
-                
-                if (!enemies.isEmpty()) {
-                    hasSurroundingEnemy = true;
-                }
-                if (!allies.isEmpty()) {
-                    hasSurroundingAlly = true;
-                }
-            }
-        }
-        
-        // If chain has no surrounding enemy stones, it cannot be considered dead
-        if (!hasSurroundingEnemy && liberties > 0) {
-            throw new InvalidNegotiationException(
-                InvalidNegotiationException.ErrorCode.CHAIN_NOT_SURROUNDED,
-                chainInfo.getChainId()
-            );
-        }
-        
-        // If chain is surrounded only by allies and has liberties, likely not dead
-        if (hasSurroundingAlly && !hasSurroundingEnemy && liberties > 0) {
-            throw new InvalidNegotiationException(
-                InvalidNegotiationException.ErrorCode.CHAIN_IS_OWN_COLOR,
-                chainInfo.getChainId()
-            );
-        }
+        // All markings are allowed - no validation restrictions
+        // Players can freely mark any chain as dead or alive during negotiation
     }
 
     /**
@@ -178,6 +153,14 @@ public class NegotiationService {
 
     /**
      * Calculates territory treating specified positions as empty.
+     * <p>
+     * Used to simulate what the board would look like with dead stones removed.
+     * Uses flood-fill algorithm to identify territory regions.
+     * </p>
+     * 
+     * @param board the current board state
+     * @param excludedPositions positions to treat as empty (dead stones)
+     * @return Territory object with calculated territory counts
      */
     private Territory calculateTerritoryExcludingPositions(Board board, Set<Position> excludedPositions) {
         int size = board.getSize();
@@ -199,7 +182,23 @@ public class NegotiationService {
     }
 
     /**
-     * BFS flood-fill to analyze a territory region.
+     * BFS flood-fill to analyze a single territory region.
+     * <p>
+     * Starts from an empty position and expands to all connected empty positions.
+     * Determines ownership based on which colors border the region:
+     * <ul>
+     *   <li>Only BLACK borders → BLACK territory</li>
+     *   <li>Only WHITE borders → WHITE territory</li>
+     *   <li>Both colors border → Dame (neutral)</li>
+     *   <li>No borders → Dame (isolated region)</li>
+     * </ul>
+     * </p>
+     * 
+     * @param board the game board
+     * @param startNode starting position for flood-fill
+     * @param visited tracking array for visited positions
+     * @param territory Territory object to update with results
+     * @param excludedPositions positions treated as empty (dead stones)
      */
     private void analyzeTerritoryRegion(Board board, Position startNode, boolean[][] visited, 
                                         Territory territory, Set<Position> excludedPositions) {

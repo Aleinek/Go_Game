@@ -5,10 +5,26 @@ import java.util.Set;
 
 import com.gogame.domain.enums.StoneColor;
 
-
+/**
+ * Represents a chain (group) of connected stones of the same color.
+ * <p>
+ * In Go, stones of the same color that are orthogonally adjacent
+ * form a chain. A chain is captured when it has no liberties
+ * (empty adjacent intersections).
+ * </p>
+ * <p>
+ * Chains can be merged when a new stone connects multiple groups.
+ * </p>
+ * 
+ * @author Go Game Team
+ * @version 1.0
+ */
 public class Chain {
+    /** Set of stones belonging to this chain. */
     Set<Stone> stones;
+    /** Color of all stones in this chain. */
     StoneColor color;
+    /** Number of liberties (breaths) this chain has. */
     int breaths;
 
     public Chain(Set<Stone> stones, StoneColor color) {
