@@ -79,8 +79,9 @@ jobs:
             echo "MONGO_PASSWORD=$MONGO_PASSWORD" > .env
             
             # 4. Zatrzymaj stare kontenery i uruchom nowe przez docker-compose
-            docker-compose down || true
-            docker-compose up -d
+            docker-compose down --remove-orphans || true
+            docker rm -f go-game-container go-game-mongodb || true
+            docker-compose up -d --force-recreate
             
             # 5. Poczekaj na uruchomienie i sprawdź status
             sleep 10
