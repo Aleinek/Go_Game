@@ -8,18 +8,32 @@
 <?import javafx.scene.shape.Circle?>
 <?import javafx.scene.layout.Region?>
 
-<VBox spacing="20.0" xmlns="http://javafx.com/javafx/25" xmlns:fx="http://javafx.com/fxml/1" fx:controller="student.pwr.controller.GameController">
+<VBox spacing="10.0" xmlns="http://javafx.com/javafx/25" xmlns:fx="http://javafx.com/fxml/1" fx:controller="student.pwr.controller.GameController">
     <children>
         <Pane fx:id="gameHeader" prefHeight="140.0" prefWidth="700.0">
             <children>
-                <VBox alignment="CENTER" prefHeight="140.0" prefWidth="700.0" spacing="10.0">
+                <VBox alignment="CENTER" prefHeight="140.0" prefWidth="700.0" spacing="8.0">
                     <Label fx:id="statusLabel" text="Waiting for opponent..." style="-fx-font-size: 24px; -fx-font-weight: bold; -fx-text-fill: black;"/>
+                    
+                    <!-- Move Navigation Panel (for review mode) -->
+                    <HBox fx:id="navigationPanel" alignment="CENTER" spacing="8.0" visible="false" managed="false">
+                        <Button fx:id="firstMoveButton" text="⏮" onAction="#onFirstMoveClicked" prefWidth="40.0" style="-fx-font-size: 14px;"/>
+                        <Button fx:id="prevMoveButton" text="◀" onAction="#onPrevMoveClicked" prefWidth="40.0" style="-fx-font-size: 14px;"/>
+                        <Label fx:id="moveCountLabel" text="Move: 0/0" prefWidth="100.0" alignment="CENTER" style="-fx-font-size: 14px; -fx-font-weight: bold;"/>
+                        <Button fx:id="nextMoveButton" text="▶" onAction="#onNextMoveClicked" prefWidth="40.0" style="-fx-font-size: 14px;"/>
+                        <Button fx:id="lastMoveButton" text="⏭" onAction="#onLastMoveClicked" prefWidth="40.0" style="-fx-font-size: 14px;"/>
+                        <Button fx:id="liveButton" text="LIVE" onAction="#onReturnToLiveClicked" prefWidth="60.0" style="-fx-font-size: 12px; -fx-background-color: #e74c3c; -fx-text-fill: white;"/>
+                    </HBox>
+                    
+                    <!-- Review mode warning -->
+                    <Label fx:id="reviewWarningLabel" text="⚠ Reviewing history - not live" visible="false" managed="false" style="-fx-font-size: 12px; -fx-text-fill: #e67e22; -fx-font-weight: bold;"/>
                     
                     <HBox alignment="CENTER" spacing="15.0" prefWidth="660.0">
                         <Button fx:id="resumeButton" text="RESUME" onAction="#onResumeClicked" visible="false" managed="false" prefWidth="80.0" style="-fx-font-weight: bold; -fx-background-color: #3498db; -fx-text-fill: white;"/>
                         <Button fx:id="passButton" text="PASS" onAction="#onPassClicked" prefWidth="80.0" style="-fx-font-weight: bold;"/>
+                        <Button fx:id="reviewButton" text="📜" onAction="#onReviewClicked" prefWidth="40.0" style="-fx-font-size: 14px;" />
                         
-                        <Region prefWidth="30.0" />
+                        <Region prefWidth="20.0" />
 
                         <!-- Black Stats -->
                         <HBox alignment="CENTER" spacing="10.0" style="-fx-background-color: rgba(0,0,0,0.3); -fx-padding: 8 15; -fx-background-radius: 10;">
@@ -31,7 +45,7 @@
                             </VBox>
                         </HBox>
 
-                        <Region prefWidth="20.0" />
+                        <Region prefWidth="10.0" />
 
                         <!-- White Stats -->
                         <HBox alignment="CENTER" spacing="10.0" style="-fx-background-color: rgba(255,255,255,0.2); -fx-padding: 8 15; -fx-background-radius: 10;">
@@ -43,7 +57,7 @@
                             </VBox>
                         </HBox>
 
-                        <Region prefWidth="30.0" />
+                        <Region prefWidth="20.0" />
 
                         <Button fx:id="acceptButton" text="ACCEPT" onAction="#onAcceptClicked" visible="false" managed="false" prefWidth="80.0" style="-fx-font-weight: bold; -fx-background-color: #27ae60; -fx-text-fill: white;"/>
 

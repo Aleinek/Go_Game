@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.TableView?>
+<?import javafx.scene.control.TableColumn?>
+<?import javafx.scene.layout.Region?>
+
+<VBox spacing="20.0" prefHeight="860.0" prefWidth="700.0" xmlns="http://javafx.com/javafx/25" xmlns:fx="http://javafx.com/fxml/1" fx:controller="student.pwr.controller.HistoryController">
+    <children>
+        <!-- Header -->
+        <HBox alignment="CENTER" prefHeight="80.0" prefWidth="700.0" style="-fx-background-color: #2c3e50;">
+            <children>
+                <Label text="Game History" style="-fx-font-size: 32px; -fx-font-weight: bold; -fx-text-fill: white;"/>
+            </children>
+        </HBox>
+
+        <!-- Table -->
+        <VBox alignment="CENTER" spacing="10.0" style="-fx-padding: 20;">
+            <children>
+                <TableView fx:id="historyTable" prefHeight="600.0" prefWidth="660.0" style="-fx-font-size: 14px;">
+                    <columns>
+                        <TableColumn fx:id="dateColumn" text="Date" prefWidth="120.0"/>
+                        <TableColumn fx:id="blackPlayerColumn" text="Black" prefWidth="100.0"/>
+                        <TableColumn fx:id="whitePlayerColumn" text="White" prefWidth="100.0"/>
+                        <TableColumn fx:id="resultColumn" text="Result" prefWidth="100.0"/>
+                        <TableColumn fx:id="sizeColumn" text="Size" prefWidth="60.0"/>
+                        <TableColumn fx:id="movesColumn" text="Moves" prefWidth="60.0"/>
+                        <TableColumn fx:id="actionColumn" text="Action" prefWidth="100.0"/>
+                    </columns>
+                </TableView>
+                
+                <Label fx:id="statusLabel" text="Loading games..." style="-fx-font-size: 14px; -fx-text-fill: #7f8c8d;"/>
+            </children>
+        </VBox>
+
+        <!-- Footer buttons -->
+        <HBox alignment="CENTER" spacing="20.0" style="-fx-padding: 20;">
+            <children>
+                <Button fx:id="refreshButton" text="Refresh" onAction="#onRefreshClicked" prefWidth="120.0" prefHeight="40.0" style="-fx-font-size: 16px; -fx-background-color: #3498db; -fx-text-fill: white;"/>
+                <Region prefWidth="50.0"/>
+                <Button fx:id="backButton" text="Back to Menu" onAction="#onBackClicked" prefWidth="150.0" prefHeight="40.0" style="-fx-font-size: 16px; -fx-background-color: #95a5a6; -fx-text-fill: white;"/>
+            </children>
+        </HBox>
+    </children>
+</VBox>

@@ -47,6 +47,7 @@ public class APIController {
         this.client = client;
         this.mapper = new ObjectMapper();
         this.mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+        this.mapper.registerModule(new com.fasterxml.jackson.datatype.jsr310.JavaTimeModule());
     }
 
     public PlayerResponse registerPlayer(String nickname) {
@@ -323,6 +324,80 @@ public class APIController {
 
         } catch (IOException | InterruptedException e) {
             throw new RuntimeException("Błąd sieci podczas zmiany statusu", e);
+        }
+    }
+    
+    // ==================== HISTORY API ====================
+    
+    /**
+     * Fetches list of finished games from history.
+     */
+    public GameHistoryDTO getGameHistory() {
+        try {
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(serverURL + "/api/history/games"))
+                    .header("Content-Type", "application/json")
+                    .GET()
+                    .build();
+
+            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+
+            if (response.statusCode() == 200) {
+                return mapper.readValue(response.body(), GameHistoryDTO.class);
+            } else {
+                throw new RuntimeException("Błąd pobierania historii! Kod: " + response.statusCode());
+            }
+
+        } catch (IOException | InterruptedException e) {
+            throw new RuntimeException("Błąd sieci podczas pobierania historii", e);
+        }
+    }
+    
+    /**
+     * Fetches replay data for a specific game.
+     */
+    public GameReplayDTO getReplayData(UUID gameId) {
+        try {
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(serverURL + "/api/history/games/" + gameId + "/replay"))
+                    .header("Content-Type", "application/json")
+                    .GET()
+                    .build();
+
+            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+
+            if (response.statusCode() == 200) {
+                return mapper.readValue(response.body(), GameReplayDTO.class);
+            } else {
+                throw new RuntimeException("Błąd pobierania replay! Kod: " + response.statusCode());
+            }
+
+        } catch (IOException | InterruptedException e) {
+            throw new RuntimeException("Błąd sieci podczas pobierania replay", e);
+        }
+    }
+    
+    /**
+     * Fetches moves list for current game (for review during play).
+     */
+    public MovesListDTO getMovesForGame(UUID gameId) {
+        try {
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(serverURL + "/api/games/" + gameId + "/moves"))
+                    .header("Content-Type", "application/json")
+                    .GET()
+                    .build();
+
+            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+
+            if (response.statusCode() == 200) {
+                return mapper.readValue(response.body(), MovesListDTO.class);
+            } else {
+                throw new RuntimeException("Błąd pobierania ruchów! Kod: " + response.statusCode());
+            }
+
+        } catch (IOException | InterruptedException e) {
+            throw new RuntimeException("Błąd sieci podczas pobierania ruchów", e);
         }
     }
 }

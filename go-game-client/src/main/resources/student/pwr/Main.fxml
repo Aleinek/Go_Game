@@ -6,5 +6,7 @@
    <children>
       <fx:include fx:id="loginView" source="LoginView.fxml" layoutX="20.0" layoutY="20.0" />
       <fx:include fx:id="gameView" source="GameView.fxml" layoutX="20.0" layoutY="20.0" visible="false"/>
+      <fx:include fx:id="historyView" source="HistoryView.fxml" layoutX="20.0" layoutY="20.0" visible="false"/>
+      <fx:include fx:id="replayView" source="ReplayView.fxml" layoutX="20.0" layoutY="20.0" visible="false"/>
    </children>
 </Pane>

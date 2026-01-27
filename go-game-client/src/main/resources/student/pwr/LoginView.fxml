@@ -49,6 +49,7 @@
                         </children>
                     </VBox>
                     <Button fx:id="searchGameButton" text="Search Game" onAction="#onSearchGameClicked" style="-fx-font-size: 20px; -fx-padding: 15 40;" />
+                    <Button fx:id="historyButton" text="Game History" onAction="#onHistoryClicked" style="-fx-font-size: 16px; -fx-padding: 10 30; -fx-background-color: #7f8c8d; -fx-text-fill: white;" />
                 </children>
                 </VBox>
             </children>

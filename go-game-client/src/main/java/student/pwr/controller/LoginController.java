@@ -43,7 +43,8 @@ public class LoginController {
     private final String SERVER_URL = "http://gogame.adamkulwicki.pl:8080";
     private APIController apiController;
     private GameWebSocketClient webSocketClient;
-    private BiConsumer<GameResponse, GameWebSocketClient> onGameStarted; 
+    private BiConsumer<GameResponse, GameWebSocketClient> onGameStarted;
+    private Runnable onHistoryRequested;
     private UUID playerId;
     private String myColor;
 
@@ -53,6 +54,7 @@ public class LoginController {
     @FXML private RadioButton size13;
     @FXML private RadioButton size9;
     @FXML private Button searchGameButton;
+    @FXML private Button historyButton;
 
     @FXML
     public void initialize() {
@@ -62,6 +64,10 @@ public class LoginController {
 
     public void setOnGameStarted(BiConsumer<GameResponse, GameWebSocketClient> onGameStarted) {
         this.onGameStarted = onGameStarted;
+    }
+    
+    public void setOnHistoryRequested(Runnable onHistoryRequested) {
+        this.onHistoryRequested = onHistoryRequested;
     }
 
     public UUID getPlayerId() {
@@ -74,6 +80,16 @@ public class LoginController {
     
     public GameWebSocketClient getWebSocketClient() {
         return webSocketClient;
+    }
+    
+    /**
+     * Resets the login view state after a game ends.
+     */
+    public void resetState() {
+        searchGameButton.setDisable(false);
+        searchGameButton.setText("Search Game");
+        // Create fresh WebSocket client for next game
+        webSocketClient = new GameWebSocketClient(SERVER_URL);
     }
 
     @FXML
@@ -176,6 +192,13 @@ public class LoginController {
     private void notifyGameStarted(GameResponse game) {
         if (onGameStarted != null) {
             onGameStarted.accept(game, webSocketClient);
+        }
+    }
+    
+    @FXML
+    private void onHistoryClicked() {
+        if (onHistoryRequested != null) {
+            onHistoryRequested.run();
         }
     }
 }

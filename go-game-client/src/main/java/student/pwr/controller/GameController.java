@@ -5,6 +5,7 @@ import javafx.concurrent.Task;
 import javafx.fxml.FXML;
 import javafx.scene.control.Label;
 import javafx.scene.control.Button;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
@@ -23,9 +24,12 @@ import student.pwr.websocket.GameWebSocketClient.GameEventWrapper;
 import java.util.UUID;
 import java.util.Set;
 import java.util.HashSet;
+import java.util.List;
+import java.util.ArrayList;
 import java.util.concurrent.TimeUnit;
 
 import student.pwr.dto.ScoreResponse;
+import student.pwr.dto.MovesListDTO;
 import javafx.scene.control.Alert;
 
 /**
@@ -62,6 +66,17 @@ public class GameController {
     @FXML private Button resumeButton;
     @FXML private Button acceptButton;
     @FXML private Button resignButton;
+    @FXML private Button reviewButton;
+    
+    // Navigation controls for move review
+    @FXML private HBox navigationPanel;
+    @FXML private Button firstMoveButton;
+    @FXML private Button prevMoveButton;
+    @FXML private Button nextMoveButton;
+    @FXML private Button lastMoveButton;
+    @FXML private Button liveButton;
+    @FXML private Label moveCountLabel;
+    @FXML private Label reviewWarningLabel;
     
     private APIController apiController;
     private GameWebSocketClient webSocketClient;
@@ -79,10 +94,23 @@ public class GameController {
     
     // Game loop control
     private volatile boolean gameLoopRunning = false;
+    
+    // Move history for review mode
+    private List<MovesListDTO.MoveInfo> moveHistory = new ArrayList<>();
+    private int reviewMoveIndex = -1; // -1 = live mode, 0+ = review mode
+    private boolean isInReviewMode = false;
+    private String[][] reviewBoardState;
+    
+    // Callback for returning to menu after game ends
+    private Runnable onGameEnded;
 
     @FXML
     public void initialize() {
         System.out.println("Kontroler gry zainicjalizowany");
+    }
+    
+    public void setOnGameEnded(Runnable callback) {
+        this.onGameEnded = callback;
     }
 
     public void initGame(GameResponse game, APIController api, UUID playerId, GameWebSocketClient wsClient, String color) {
@@ -110,6 +138,7 @@ public class GameController {
         System.out.println("-------------------");
 
         this.boardSize = game.boardSize();
+        this.reviewBoardState = new String[boardSize][boardSize];
         drawBoardGrid();
         
         // Wyczyść kolejkę eventów przed startem pętli
@@ -294,6 +323,10 @@ public class GameController {
             case GameEvent.OPPONENT_MOVED -> {
                 OpponentMovedPayload moved = (OpponentMovedPayload) event.payload();
                 System.out.println("Opponent moved! Turn: " + moved.currentTurn());
+                // Return to live mode when opponent moves
+                if (isInReviewMode) {
+                    Platform.runLater(this::returnToLiveMode);
+                }
                 refreshGameState();
             }
             case GameEvent.OPPONENT_PASSED -> {
@@ -371,6 +404,7 @@ public class GameController {
         }
         
         alert.showAndWait();
+        returnToMenu();
     }
 
     private void refreshGameState() {
@@ -554,10 +588,14 @@ public class GameController {
                             diff
                         ));
                         alert.showAndWait();
+                        returnToMenu();
                     });
                 } catch (Exception e) {
                    e.printStackTrace();
-                   Platform.runLater(() -> AlertUtils.showAlert("Game Over", "Could not fetch final score. Status: " + game.status() + "\nError: " + e.getMessage()));
+                   Platform.runLater(() -> {
+                       AlertUtils.showAlert("Game Over", "Could not fetch final score. Status: " + game.status() + "\nError: " + e.getMessage());
+                       returnToMenu();
+                   });
                 }
             }).start();
         } else if ("RESIGNED".equals(game.status())) {
@@ -567,6 +605,7 @@ public class GameController {
              alert.setHeaderText("Result: Resignation");
              alert.setContentText(msg != null && !msg.isBlank() ? msg : "A player has resigned.");
              alert.showAndWait();
+             returnToMenu();
         } else {
              String msg = game.message();
              if (msg == null || msg.isBlank()) {
@@ -578,6 +617,13 @@ public class GameController {
              alert.setHeaderText("Game Ended: " + game.status());
              alert.setContentText(msg);
              alert.showAndWait();
+             returnToMenu();
+        }
+    }
+    
+    private void returnToMenu() {
+        if (onGameEnded != null) {
+            onGameEnded.run();
         }
     }
 
@@ -640,5 +686,225 @@ public class GameController {
         resumeButton.setManaged(isNegotiating);
         acceptButton.setVisible(isNegotiating);
         acceptButton.setManaged(isNegotiating);
+        
+        // Hide review button during negotiation
+        if (reviewButton != null) {
+            reviewButton.setVisible(!isNegotiating);
+            reviewButton.setManaged(!isNegotiating);
+        }
+    }
+    
+    // ==================== MOVE REVIEW MODE ====================
+    
+    @FXML
+    private void onReviewClicked() {
+        if (isInReviewMode) {
+            returnToLiveMode();
+        } else {
+            enterReviewMode();
+        }
+    }
+    
+    private void enterReviewMode() {
+        // Fetch current move history
+        new Thread(() -> {
+            try {
+                MovesListDTO movesData = apiController.getMovesForGame(currentGame.id());
+                
+                Platform.runLater(() -> {
+                    if (movesData.moves() != null) {
+                        moveHistory.clear();
+                        moveHistory.addAll(movesData.moves());
+                    }
+                    
+                    if (moveHistory.isEmpty()) {
+                        AlertUtils.showAlert("Info", "No moves to review yet.");
+                        return;
+                    }
+                    
+                    isInReviewMode = true;
+                    reviewMoveIndex = moveHistory.size() - 1; // Start at last move
+                    
+                    showReviewControls(true);
+                    updateReviewBoard();
+                    updateReviewControls();
+                });
+                
+            } catch (Exception e) {
+                e.printStackTrace();
+                Platform.runLater(() -> AlertUtils.showAlert("Error", "Could not load moves: " + e.getMessage()));
+            }
+        }).start();
+    }
+    
+    private void returnToLiveMode() {
+        isInReviewMode = false;
+        reviewMoveIndex = -1;
+        
+        showReviewControls(false);
+        
+        // Refresh to show live state
+        refreshGameState();
+    }
+    
+    private void showReviewControls(boolean show) {
+        if (navigationPanel != null) {
+            navigationPanel.setVisible(show);
+            navigationPanel.setManaged(show);
+        }
+        if (reviewWarningLabel != null) {
+            reviewWarningLabel.setVisible(show);
+            reviewWarningLabel.setManaged(show);
+        }
+        if (reviewButton != null) {
+            reviewButton.setText(show ? "🔴" : "📜");
+        }
+    }
+    
+    private void updateReviewControls() {
+        int totalMoves = moveHistory.size();
+        
+        if (moveCountLabel != null) {
+            moveCountLabel.setText("Move: " + (reviewMoveIndex + 1) + "/" + totalMoves);
+        }
+        
+        if (firstMoveButton != null) firstMoveButton.setDisable(reviewMoveIndex <= 0);
+        if (prevMoveButton != null) prevMoveButton.setDisable(reviewMoveIndex <= 0);
+        if (nextMoveButton != null) nextMoveButton.setDisable(reviewMoveIndex >= totalMoves - 1);
+        if (lastMoveButton != null) lastMoveButton.setDisable(reviewMoveIndex >= totalMoves - 1);
+    }
+    
+    private void updateReviewBoard() {
+        // Reconstruct board at current review position
+        reconstructReviewBoard(reviewMoveIndex);
+        drawReviewBoard();
+        updateReviewControls();
+    }
+    
+    private void reconstructReviewBoard(int targetMoveIndex) {
+        // Clear board
+        for (int x = 0; x < boardSize; x++) {
+            for (int y = 0; y < boardSize; y++) {
+                reviewBoardState[x][y] = null;
+            }
+        }
+        
+        if (targetMoveIndex < 0 || moveHistory.isEmpty()) {
+            return;
+        }
+        
+        // Replay moves up to target index
+        for (int i = 0; i <= targetMoveIndex && i < moveHistory.size(); i++) {
+            MovesListDTO.MoveInfo move = moveHistory.get(i);
+            if (move.x() != null && move.y() != null) {
+                reviewBoardState[move.x()][move.y()] = move.color();
+            }
+        }
+        
+        // Remove captured stones (simplified - check for no liberties)
+        removeDeadStonesFromReview();
+    }
+    
+    private void removeDeadStonesFromReview() {
+        boolean changed = true;
+        while (changed) {
+            changed = false;
+            for (int x = 0; x < boardSize; x++) {
+                for (int y = 0; y < boardSize; y++) {
+                    if (reviewBoardState[x][y] != null) {
+                        if (!hasLibertiesReview(x, y, reviewBoardState[x][y], new boolean[boardSize][boardSize])) {
+                            removeGroupReview(x, y, reviewBoardState[x][y]);
+                            changed = true;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    private boolean hasLibertiesReview(int x, int y, String color, boolean[][] visited) {
+        if (x < 0 || x >= boardSize || y < 0 || y >= boardSize) return false;
+        if (visited[x][y]) return false;
+        if (reviewBoardState[x][y] == null) return true; // Empty = liberty
+        if (!reviewBoardState[x][y].equals(color)) return false;
+        
+        visited[x][y] = true;
+        
+        return hasLibertiesReview(x+1, y, color, visited) ||
+               hasLibertiesReview(x-1, y, color, visited) ||
+               hasLibertiesReview(x, y+1, color, visited) ||
+               hasLibertiesReview(x, y-1, color, visited);
+    }
+    
+    private void removeGroupReview(int x, int y, String color) {
+        if (x < 0 || x >= boardSize || y < 0 || y >= boardSize) return;
+        if (reviewBoardState[x][y] == null || !reviewBoardState[x][y].equals(color)) return;
+        
+        reviewBoardState[x][y] = null;
+        removeGroupReview(x+1, y, color);
+        removeGroupReview(x-1, y, color);
+        removeGroupReview(x, y+1, color);
+        removeGroupReview(x, y-1, color);
+    }
+    
+    private void drawReviewBoard() {
+        clearStones();
+        
+        // Draw stones from review state
+        for (int x = 0; x < boardSize; x++) {
+            for (int y = 0; y < boardSize; y++) {
+                if (reviewBoardState[x][y] != null) {
+                    drawStone(x, y, reviewBoardState[x][y], false);
+                }
+            }
+        }
+        
+        // Highlight last move
+        if (reviewMoveIndex >= 0 && reviewMoveIndex < moveHistory.size()) {
+            MovesListDTO.MoveInfo move = moveHistory.get(reviewMoveIndex);
+            if (move.x() != null && move.y() != null) {
+                // Draw highlight marker
+                Circle marker = new Circle(cellSize / 5);
+                marker.setUserData("stone");
+                marker.setCenterX(BOARD_PADDING + move.x() * cellSize);
+                marker.setCenterY(BOARD_PADDING + move.y() * cellSize);
+                marker.setFill("BLACK".equals(move.color()) ? Color.WHITE : Color.BLACK);
+                marker.setMouseTransparent(true);
+                gamePane.getChildren().add(marker);
+            }
+        }
+    }
+    
+    @FXML
+    private void onFirstMoveClicked() {
+        if (!isInReviewMode) return;
+        reviewMoveIndex = 0;
+        updateReviewBoard();
+    }
+    
+    @FXML
+    private void onPrevMoveClicked() {
+        if (!isInReviewMode || reviewMoveIndex <= 0) return;
+        reviewMoveIndex--;
+        updateReviewBoard();
+    }
+    
+    @FXML
+    private void onNextMoveClicked() {
+        if (!isInReviewMode || reviewMoveIndex >= moveHistory.size() - 1) return;
+        reviewMoveIndex++;
+        updateReviewBoard();
+    }
+    
+    @FXML
+    private void onLastMoveClicked() {
+        if (!isInReviewMode) return;
+        reviewMoveIndex = moveHistory.size() - 1;
+        updateReviewBoard();
+    }
+    
+    @FXML
+    private void onReturnToLiveClicked() {
+        returnToLiveMode();
     }
 }
