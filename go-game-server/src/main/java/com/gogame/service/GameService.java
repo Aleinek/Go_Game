@@ -14,6 +14,8 @@ import com.gogame.dto.response.MoveResponse;
 import com.gogame.dto.response.MovesListResponse;
 import com.gogame.websocket.GameEventPayloads;
 import org.springframework.stereotype.Service;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.time.Instant;
 import java.util.*;
@@ -42,6 +44,8 @@ import java.util.stream.Collectors;
 @Service
 public class GameService {
     
+    private static final Logger log = LoggerFactory.getLogger(GameService.class);
+    
     private final Map<UUID, Game> games = new ConcurrentHashMap<>();
     private final Map<UUID, Instant> gameCreatedAt = new ConcurrentHashMap<>();
     private final Map<UUID, Instant> gameUpdatedAt = new ConcurrentHashMap<>();
@@ -50,14 +54,17 @@ public class GameService {
     private final BoardService boardService;
     private final GameNotificationService notificationService;
     private final NegotiationService negotiationService;
+    private final GameHistoryService gameHistoryService;
     
     public GameService(PlayerService playerService, BoardService boardService,
                       GameNotificationService notificationService,
-                      NegotiationService negotiationService) {
+                      NegotiationService negotiationService,
+                      GameHistoryService gameHistoryService) {
         this.playerService = playerService;
         this.boardService = boardService;
         this.notificationService = notificationService;
         this.negotiationService = negotiationService;
+        this.gameHistoryService = gameHistoryService;
     }
     
     public GameResponse createGame(UUID blackPlayerId, UUID whitePlayerId, int boardSize) {
@@ -155,6 +162,9 @@ public class GameService {
             game.currentTurn.toString()
         );
 
+        // Save game state to MongoDB
+        saveGameToHistory(game);
+
         return buildMoveResponse(game, move, capturedPositions, "Move made successfully");
     }
 
@@ -236,6 +246,9 @@ public class GameService {
             );
         }
         
+        // Save game state to MongoDB
+        saveGameToHistory(game);
+        
         return buildMoveResponse(game, move, Collections.emptyList(), message);
     }
     
@@ -290,6 +303,9 @@ public class GameService {
         
         String message = resigningPlayer.getNickname() + " resigned. " + 
                         winner.getNickname() + " wins!";
+        
+        // Save game state to MongoDB (final state)
+        saveGameToHistory(game);
         
         return buildGameResponse(game, message);
     }
@@ -388,6 +404,9 @@ public class GameService {
                 score.getWinner(),
                 scoreBreakdown
             );
+            
+            // Save final game state to MongoDB
+            saveGameToHistory(game);
         } else {
             // Notify about acceptance
             ScoreResult currentScore = negotiationService.calculateFinalScore(game);
@@ -596,5 +615,18 @@ public class GameService {
             boardInfo,
             message
         );
+    }
+    
+    /**
+     * Saves game state to MongoDB history.
+     * Logs warning on failure but doesn't interrupt gameplay.
+     */
+    private void saveGameToHistory(Game game) {
+        try {
+            gameHistoryService.saveGame(game);
+            log.debug("Game {} saved to history", game.id);
+        } catch (Exception e) {
+            log.warn("Failed to save game {} to history: {}", game.id, e.getMessage());
+        }
     }
 }

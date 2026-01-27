@@ -35,42 +35,56 @@ jobs:
           push: true
           tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
 
-  # KROK 2: Logowanie na VPS i uruchomienie kontenera
+  # KROK 2: Logowanie na VPS i uruchomienie kontenerów z docker-compose
   deploy-to-vps:
     needs: build-and-push
     runs-on: ubuntu-latest
 
     steps:
-      - name: Deploy via SSH
-        uses: appleboy/ssh-action@master
-        env:
-          # Mapujemy zmienne GitHuba na zmienne środowiskowe dostępne dla akcji
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITHUB_ACTOR: ${{ github.actor }}
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Copy docker-compose to VPS
+        uses: appleboy/scp-action@master
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           port: 22
-          # Instrukcja, żeby wysłać te zmienne na serwer VPS
-          envs: GITHUB_TOKEN,GITHUB_ACTOR,REGISTRY,IMAGE_NAME,CONTAINER_NAME
+          source: "docker-compose.yml"
+          target: "~/go-game"
+
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@master
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_ACTOR: ${{ github.actor }}
+          MONGO_PASSWORD: ${{ secrets.MONGO_PASSWORD }}
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: 22
+          envs: GITHUB_TOKEN,GITHUB_ACTOR,REGISTRY,IMAGE_NAME,CONTAINER_NAME,MONGO_PASSWORD
           script: |
-            # 1. ZALOGUJ SIĘ AUTOMATYCZNIE (To naprawi błąd "denied")
+            cd ~/go-game
+            
+            # 1. Zaloguj się do GitHub Container Registry
             echo $GITHUB_TOKEN | docker login ghcr.io -u $GITHUB_ACTOR --password-stdin
             
-            # 2. Pobierz najnowszy obraz
+            # 2. Pobierz najnowszy obraz serwera
             docker pull $REGISTRY/$IMAGE_NAME:latest
             
-            # 3. Zatrzymaj i usuń stary kontener
-            docker stop $CONTAINER_NAME || true
-            docker rm $CONTAINER_NAME || true
+            # 3. Utwórz plik .env z hasłem do MongoDB
+            echo "MONGO_PASSWORD=$MONGO_PASSWORD" > .env
             
-            # 4. Uruchom nowy
-            docker run -d \
-              --name $CONTAINER_NAME \
-              --restart always \
-              -p 8080:8080 \
-              $REGISTRY/$IMAGE_NAME:latest
+            # 4. Zatrzymaj stare kontenery i uruchom nowe przez docker-compose
+            docker-compose down || true
+            docker-compose up -d
             
-            # 5. Posprzątaj
+            # 5. Poczekaj na uruchomienie i sprawdź status
+            sleep 10
+            docker-compose ps
+            
+            # 6. Posprzątaj stare obrazy
             docker image prune -f

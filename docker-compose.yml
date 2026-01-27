@@ -1,0 +1,43 @@
+services:
+  mongodb:
+    image: mongo:7.0
+    container_name: go-game-mongodb
+    restart: always
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD}
+      MONGO_INITDB_DATABASE: gogame
+    ports:
+      - "127.0.0.1:27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - go-game-network
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  go-game-server:
+    image: ghcr.io/aleinek/go_game_server:latest
+    container_name: go-game-container
+    restart: always
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_DATA_MONGODB_URI: mongodb://admin:${MONGO_PASSWORD}@mongodb:27017/gogame?authSource=admin
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    networks:
+      - go-game-network
+
+volumes:
+  mongodb_data:
+    driver: local
+
+networks:
+  go-game-network:
+    driver: bridge

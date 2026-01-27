@@ -4,3 +4,13 @@ server:
 spring:
   application:
     name: go-game-server
+  
+  data:
+    mongodb:
+      uri: ${SPRING_DATA_MONGODB_URI:mongodb://localhost:27017/gogame}
+      auto-index-creation: true
+
+logging:
+  level:
+    com.gogame: DEBUG
+    org.springframework.data.mongodb: INFO
