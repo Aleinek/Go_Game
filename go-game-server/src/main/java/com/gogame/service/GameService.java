@@ -1,5 +1,6 @@
 package com.gogame.service;
 
+import com.gogame.bot.BotMoveScheduler;
 import com.gogame.domain.enums.DeadStoneStatus;
 import com.gogame.domain.enums.GameStatus;
 import com.gogame.domain.enums.StoneColor;
@@ -55,6 +56,7 @@ public class GameService {
     private final GameNotificationService notificationService;
     private final NegotiationService negotiationService;
     private final GameHistoryService gameHistoryService;
+    private BotMoveScheduler botMoveScheduler;
     
     public GameService(PlayerService playerService, BoardService boardService,
                       GameNotificationService notificationService,
@@ -67,21 +69,30 @@ public class GameService {
         this.gameHistoryService = gameHistoryService;
     }
     
+    /**
+     * Sets the bot move scheduler (setter injection to avoid circular dependency).
+     */
+    public void setBotMoveScheduler(BotMoveScheduler botMoveScheduler) {
+        this.botMoveScheduler = botMoveScheduler;
+    }
+    
     public GameResponse createGame(UUID blackPlayerId, UUID whitePlayerId, int boardSize) {
         // Validate that both players exist (throws PlayerNotFoundException if not)
         Player existingBlackPlayer = playerService.getPlayer(blackPlayerId);
         Player existingWhitePlayer = playerService.getPlayer(whitePlayerId);
         
-        // Create game-specific player instances with stone colors
+        // Create game-specific player instances with stone colors (preserve isBot flag)
         Player blackPlayer = new Player(
             blackPlayerId, 
             existingBlackPlayer.getNickname(), 
-            StoneColor.BLACK
+            StoneColor.BLACK,
+            existingBlackPlayer.isBot()
         );
         Player whitePlayer = new Player(
             whitePlayerId, 
             existingWhitePlayer.getNickname(), 
-            StoneColor.WHITE
+            StoneColor.WHITE,
+            existingWhitePlayer.isBot()
         );
         
         Board board = new Board(boardSize, blackPlayer, whitePlayer);
@@ -164,6 +175,9 @@ public class GameService {
 
         // Save game state to MongoDB
         saveGameToHistory(game);
+        
+        // Check if next player is a bot and schedule their move
+        scheduleBotMoveIfNeeded(game);
 
         return buildMoveResponse(game, move, capturedPositions, "Move made successfully");
     }
@@ -248,6 +262,11 @@ public class GameService {
         
         // Save game state to MongoDB
         saveGameToHistory(game);
+        
+        // Check if next player is a bot and schedule their move (only if not negotiating)
+        if (game.status == GameStatus.IN_PROGRESS) {
+            scheduleBotMoveIfNeeded(game);
+        }
         
         return buildMoveResponse(game, move, Collections.emptyList(), message);
     }
@@ -627,6 +646,79 @@ public class GameService {
             log.debug("Game {} saved to history", game.id);
         } catch (Exception e) {
             log.warn("Failed to save game {} to history: {}", game.id, e.getMessage());
+        }
+    }
+    
+    // ==================== BOT SUPPORT METHODS ====================
+    
+    /**
+     * Creates a game between a human player and a bot.
+     * 
+     * @param humanPlayerId the human player's UUID
+     * @param boardSize the board size (9, 13, or 19)
+     * @return GameResponse for the created game
+     */
+    public GameResponse createGameWithBot(UUID humanPlayerId, int boardSize) {
+        // Create bot player
+        var botResponse = playerService.createBotPlayer();
+        UUID botId = botResponse.id();
+        
+        log.info("Creating game with bot. Human: {}, Bot: {}, Size: {}", 
+            humanPlayerId, botId, boardSize);
+        
+        // Human plays as BLACK (first move)
+        GameResponse response = createGame(humanPlayerId, botId, boardSize);
+        
+        return response;
+    }
+    
+    /**
+     * Schedules a bot move if the current player is a bot.
+     * Called after every human move/pass to trigger bot response.
+     */
+    private void scheduleBotMoveIfNeeded(Game game) {
+        if (botMoveScheduler == null) {
+            log.debug("BotMoveScheduler not configured, skipping bot check");
+            return;
+        }
+        
+        if (game.status != GameStatus.IN_PROGRESS) {
+            return;
+        }
+        
+        Player nextPlayer = game.getCurrentPlayer();
+        if (nextPlayer.isBot()) {
+            log.info("Scheduling bot move for game {} (bot: {})", game.id, nextPlayer.getNickname());
+            botMoveScheduler.scheduleBotMove(
+                game,
+                nextPlayer,
+                this::executeBotMove,
+                this::executeBotPass
+            );
+        }
+    }
+    
+    /**
+     * Executes a move calculated by the bot.
+     */
+    private void executeBotMove(UUID gameId, MakeMoveRequest moveRequest) {
+        try {
+            Game game = findGame(gameId);
+            UUID botPlayerId = game.getCurrentPlayer().getId();
+            makeMove(gameId, botPlayerId, moveRequest);
+        } catch (Exception e) {
+            log.error("Failed to execute bot move for game {}: {}", gameId, e.getMessage(), e);
+        }
+    }
+    
+    /**
+     * Executes a pass by the bot.
+     */
+    private void executeBotPass(UUID gameId, UUID botPlayerId) {
+        try {
+            pass(gameId, botPlayerId);
+        } catch (Exception e) {
+            log.error("Failed to execute bot pass for game {}: {}", gameId, e.getMessage(), e);
         }
     }
 }

@@ -54,6 +54,7 @@ public class LoginController {
     @FXML private RadioButton size13;
     @FXML private RadioButton size9;
     @FXML private Button searchGameButton;
+    @FXML private Button playWithBotButton;
     @FXML private Button historyButton;
 
     @FXML
@@ -88,6 +89,8 @@ public class LoginController {
     public void resetState() {
         searchGameButton.setDisable(false);
         searchGameButton.setText("Search Game");
+        playWithBotButton.setDisable(false);
+        playWithBotButton.setText("🤖 PLAY WITH BOT");
         // Create fresh WebSocket client for next game
         webSocketClient = new GameWebSocketClient(SERVER_URL);
     }
@@ -200,5 +203,62 @@ public class LoginController {
         if (onHistoryRequested != null) {
             onHistoryRequested.run();
         }
+    }
+    
+    /**
+     * Handles click on "PLAY WITH BOT" button.
+     * Creates a game against a bot opponent without waiting for matchmaking.
+     */
+    @FXML
+    private void onPlayWithBotClicked() {
+        String nickname = usernameField.getText();
+        if (nickname == null || nickname.trim().isEmpty()) {
+            AlertUtils.showAlert("Error", "Enter username!");
+            return;
+        }
+
+        int boardSize = 19;
+        if (size13.isSelected()) boardSize = 13;
+        if (size9.isSelected()) boardSize = 9;
+
+        // Disable both buttons
+        searchGameButton.setDisable(true);
+        playWithBotButton.setDisable(true);
+        playWithBotButton.setText("Starting game...");
+
+        final int finalBoardSize = boardSize;
+
+        new Thread(() -> {
+            try {
+                System.out.println("Rejestracja gracza: " + nickname);
+                PlayerResponse player = apiController.registerPlayer(nickname);
+                this.playerId = player.id();
+                
+                // Connect WebSocket
+                Platform.runLater(() -> playWithBotButton.setText("Connecting..."));
+                webSocketClient.connect(playerId);
+                System.out.println("WebSocket połączony dla gracza: " + playerId);
+                
+                // Create game with bot (instant start)
+                Platform.runLater(() -> playWithBotButton.setText("Creating game with bot..."));
+                System.out.println("Tworzenie gry z botem, rozmiar: " + finalBoardSize);
+                GameResponse game = apiController.joinGameWithBot(playerId, finalBoardSize);
+                
+                // Player is always BLACK vs bot
+                this.myColor = "BLACK";
+                System.out.println("Gra z botem utworzona! ID: " + game.id());
+                
+                Platform.runLater(() -> notifyGameStarted(game));
+
+            } catch (Exception e) {
+                e.printStackTrace();
+                Platform.runLater(() -> {
+                    AlertUtils.showAlert("Error", "Failed to start game with bot: " + e.getMessage());
+                    searchGameButton.setDisable(false);
+                    playWithBotButton.setDisable(false);
+                    playWithBotButton.setText("🤖 PLAY WITH BOT");
+                });
+            }
+        }).start();
     }
 }

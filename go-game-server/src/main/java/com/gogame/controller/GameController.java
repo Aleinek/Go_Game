@@ -46,6 +46,29 @@ public class GameController {
     private record WaitingGame(UUID playerId, int boardSize, UUID actualGameId) {}
 
     /**
+     * Creates a new game against a bot opponent.
+     * <p>
+     * Immediately starts a game without waiting for matchmaking.
+     * The human player always plays as BLACK (moves first).
+     * </p>
+     * 
+     * @param playerId the UUID of the human player from X-Player-Id header
+     * @param request contains the desired board size (9, 13, or 19)
+     * @return CREATED (201) with game details
+     */
+    @PostMapping("/join-with-bot")
+    public ResponseEntity<GameResponse> joinGameWithBot(
+            @RequestHeader("X-Player-Id") UUID playerId,
+            @RequestBody JoinGameRequest request) {
+        
+        gameService.validatePlayerExists(playerId);
+        
+        GameResponse response = gameService.createGameWithBot(playerId, request.boardSize());
+        
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    /**
      * Joins a game or enters the matchmaking queue.
      * <p>
      * If another player is waiting for the same board size, creates a new game.

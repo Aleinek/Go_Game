@@ -99,6 +99,39 @@ public class APIController {
         }
     }
 
+    /**
+     * Creates a game against a bot opponent.
+     * Game starts immediately without waiting for matchmaking.
+     * 
+     * @param playerId the human player's UUID
+     * @param boardSize board size (9, 13, or 19)
+     * @return GameResponse with the created game (status IN_PROGRESS)
+     */
+    public GameResponse joinGameWithBot(UUID playerId, int boardSize) {
+        try {
+            JoinGameRequest requestBody = new JoinGameRequest(boardSize);
+            String jsonToSend = mapper.writeValueAsString(requestBody);
+
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(serverURL + "/api/games/join-with-bot"))
+                    .header("Content-Type", "application/json")
+                    .header("X-Player-Id", playerId.toString())
+                    .POST(HttpRequest.BodyPublishers.ofString(jsonToSend))
+                    .build();
+
+            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+
+            if (response.statusCode() == 201) {
+                return mapper.readValue(response.body(), GameResponse.class);
+            } else {
+                throw new RuntimeException("Błąd tworzenia gry z botem! Kod: " + response.statusCode() + ", Treść: " + response.body());
+            }
+
+        } catch (IOException | InterruptedException e) {
+            throw new RuntimeException("Błąd połączenia z serwerem przy tworzeniu gry z botem", e);
+        }
+    }
+
     public WaitingStatus checkWaitingStatus(UUID waitingId) {
         try {
             HttpRequest request = HttpRequest.newBuilder()

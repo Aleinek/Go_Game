@@ -55,6 +55,10 @@ public class Board {
     public int getSize() {
         return size;
     }
+    
+    public Position getKoPosition() {
+        return koPosition;
+    }
 
     public Stone[][] getGrid() {
         return grid;

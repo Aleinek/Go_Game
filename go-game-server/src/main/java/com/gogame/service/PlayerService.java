@@ -44,7 +44,7 @@ public class PlayerService {
         String token = generateToken(playerId);
         Instant now = Instant.now();
         
-        Player player = new Player(playerId, request.nickname(), null);
+        Player player = new Player(playerId, request.nickname(), null, false);
         
         players.put(playerId, player);
         nicknameToId.put(request.nickname(), playerId);
@@ -120,5 +120,37 @@ public class PlayerService {
      */
     public void resetCapturedStones(UUID playerId) {
         getPlayer(playerId);
+    }
+    
+    /**
+     * Creates a bot player with an auto-generated nickname.
+     * 
+     * @return PlayerResponse for the created bot
+     */
+    public PlayerResponse createBotPlayer() {
+        String botNickname = "Bot-" + UUID.randomUUID().toString().substring(0, 6);
+        UUID botId = UUID.randomUUID();
+        String token = generateToken(botId);
+        Instant now = Instant.now();
+        
+        Player botPlayer = new Player(botId, botNickname, null, true);
+        
+        players.put(botId, botPlayer);
+        nicknameToId.put(botNickname, botId);
+        tokens.put(botId, token);
+        createdAt.put(botId, now);
+        
+        return new PlayerResponse(botId, botNickname, token, now);
+    }
+    
+    /**
+     * Checks if a player is a bot.
+     * 
+     * @param playerId the player's UUID
+     * @return true if the player is a bot
+     */
+    public boolean isBot(UUID playerId) {
+        Player player = players.get(playerId);
+        return player != null && player.isBot();
     }
 }

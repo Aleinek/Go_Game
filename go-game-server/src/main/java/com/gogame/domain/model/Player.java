@@ -28,12 +28,19 @@ public class Player {
     int capturedStones;
     /** The stone color assigned to this player (BLACK or WHITE). */
     StoneColor stoneColor;
+    /** Whether this player is a bot. */
+    boolean isBot;
 
     public Player(UUID id, String nickname, StoneColor stoneColor) {
+        this(id, nickname, stoneColor, false);
+    }
+    
+    public Player(UUID id, String nickname, StoneColor stoneColor, boolean isBot) {
         this.id = id;
         this.nickname = nickname;
         this.stoneColor = stoneColor;
         this.capturedStones = 0;
+        this.isBot = isBot;
     }
 
     public UUID getId() {
@@ -54,5 +61,9 @@ public class Player {
 
     public StoneColor getStoneColor() {
         return stoneColor;
+    }
+    
+    public boolean isBot() {
+        return isBot;
     }
 }
