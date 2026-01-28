@@ -383,7 +383,7 @@ public class ReplayController {
     
     private void startAutoPlay() {
         isAutoPlaying = true;
-        autoPlayButton.setText("⏸ Stop");
+        autoPlayButton.setText("Stop");
         autoPlayButton.setStyle("-fx-font-size: 14px; -fx-background-color: #e74c3c; -fx-text-fill: white;");
         
         autoPlayTimeline = new Timeline(new KeyFrame(Duration.millis(800), e -> {
