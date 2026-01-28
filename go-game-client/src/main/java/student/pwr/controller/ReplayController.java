@@ -233,51 +233,76 @@ public class ReplayController {
             return;
         }
         
-        // Simple reconstruction - just place stones
-        // Note: This doesn't handle captures properly, would need full game logic
+        // Reconstruct by simulating each move in order
+        // This properly handles captures - after each stone placement,
+        // first remove opponent groups with no liberties, then check self-capture
         for (int i = 0; i <= targetMoveIndex && i < replayData.moves().size(); i++) {
             ReplayMove move = replayData.moves().get(i);
             if (!move.isPass() && move.x() != null && move.y() != null) {
-                boardState[move.x()][move.y()] = move.playerColor();
+                int x = move.x();
+                int y = move.y();
+                String playerColor = move.playerColor();
+                String opponentColor = "BLACK".equals(playerColor) ? "WHITE" : "BLACK";
+                
+                // Place the stone
+                boardState[x][y] = playerColor;
+                
+                // First, remove opponent groups that lost their last liberty
+                removeDeadGroups(opponentColor);
+                
+                // Then, remove self-captured groups (suicide moves if allowed)
+                removeDeadGroups(playerColor);
             }
         }
-        
-        // Remove captured stones (simplified - based on captured count in moves)
-        // For proper implementation, would need to track captures
-        removeDeadStones();
     }
     
-    private void removeDeadStones() {
-        // Simplified capture detection - check for groups with no liberties
-        boolean changed = true;
-        while (changed) {
-            changed = false;
-            for (int x = 0; x < boardSize; x++) {
-                for (int y = 0; y < boardSize; y++) {
-                    if (boardState[x][y] != null) {
-                        if (!hasLiberties(x, y, boardState[x][y], new boolean[boardSize][boardSize])) {
-                            // Remove this group
-                            removeGroup(x, y, boardState[x][y]);
-                            changed = true;
-                        }
+    private void removeDeadGroups(String color) {
+        // Find and remove all groups of given color that have no liberties
+        boolean[][] checked = new boolean[boardSize][boardSize];
+        
+        for (int x = 0; x < boardSize; x++) {
+            for (int y = 0; y < boardSize; y++) {
+                if (boardState[x][y] != null && boardState[x][y].equals(color) && !checked[x][y]) {
+                    // Found a stone of this color - check if its group has liberties
+                    if (!groupHasLiberties(x, y, color, new boolean[boardSize][boardSize])) {
+                        // Remove this group
+                        removeGroup(x, y, color);
                     }
+                    // Mark all stones in this group as checked
+                    markGroup(x, y, color, checked);
                 }
             }
         }
     }
     
-    private boolean hasLiberties(int x, int y, String color, boolean[][] visited) {
+    private void markGroup(int x, int y, String color, boolean[][] checked) {
+        if (x < 0 || x >= boardSize || y < 0 || y >= boardSize) return;
+        if (checked[x][y]) return;
+        if (boardState[x][y] == null || !boardState[x][y].equals(color)) return;
+        
+        checked[x][y] = true;
+        markGroup(x + 1, y, color, checked);
+        markGroup(x - 1, y, color, checked);
+        markGroup(x, y + 1, color, checked);
+        markGroup(x, y - 1, color, checked);
+    }
+    
+    private boolean groupHasLiberties(int x, int y, String color, boolean[][] visited) {
         if (x < 0 || x >= boardSize || y < 0 || y >= boardSize) return false;
         if (visited[x][y]) return false;
-        if (boardState[x][y] == null) return true; // Empty = liberty
+        
+        // Empty intersection = liberty found
+        if (boardState[x][y] == null) return true;
+        
+        // Different color = not part of group
         if (!boardState[x][y].equals(color)) return false;
         
         visited[x][y] = true;
         
-        return hasLiberties(x+1, y, color, visited) ||
-               hasLiberties(x-1, y, color, visited) ||
-               hasLiberties(x, y+1, color, visited) ||
-               hasLiberties(x, y-1, color, visited);
+        return groupHasLiberties(x + 1, y, color, visited) ||
+               groupHasLiberties(x - 1, y, color, visited) ||
+               groupHasLiberties(x, y + 1, color, visited) ||
+               groupHasLiberties(x, y - 1, color, visited);
     }
     
     private void removeGroup(int x, int y, String color) {
