@@ -90,7 +90,7 @@ public class LoginController {
         searchGameButton.setDisable(false);
         searchGameButton.setText("Search Game");
         playWithBotButton.setDisable(false);
-        playWithBotButton.setText("🤖 PLAY WITH BOT");
+        playWithBotButton.setText("PLAY WITH BOT");
         // Create fresh WebSocket client for next game
         webSocketClient = new GameWebSocketClient(SERVER_URL);
     }
@@ -256,7 +256,7 @@ public class LoginController {
                     AlertUtils.showAlert("Error", "Failed to start game with bot: " + e.getMessage());
                     searchGameButton.setDisable(false);
                     playWithBotButton.setDisable(false);
-                    playWithBotButton.setText("🤖 PLAY WITH BOT");
+                    playWithBotButton.setText("PLAY WITH BOT");
                 });
             }
         }).start();
