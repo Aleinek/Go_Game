@@ -102,4 +102,41 @@ public class BotMoveScheduler {
     public boolean isBot(Player player) {
         return botService.isBotPlayer(player.getNickname());
     }
+    
+    /**
+     * Schedules automatic score acceptance for a bot player during negotiation.
+     * 
+     * @param game the current game state
+     * @param botPlayer the bot player who should accept
+     * @param acceptCallback callback function to execute the acceptance (gameId, playerId)
+     */
+    @Async
+    public void scheduleBotNegotiationAccept(
+            Game game,
+            Player botPlayer,
+            BiConsumer<UUID, UUID> acceptCallback) {
+        
+        try {
+            // Short delay before accepting (simulate reviewing the board)
+            int delay = MIN_DELAY_MS + random.nextInt(MAX_DELAY_MS - MIN_DELAY_MS);
+            log.debug("Bot scheduling negotiation accept in {} ms for game {}", delay, game.id);
+            Thread.sleep(delay);
+            
+            // Verify game is still in negotiation
+            if (game.status != GameStatus.NEGOTIATING) {
+                log.debug("Game {} no longer in negotiation, bot accept cancelled", game.id);
+                return;
+            }
+            
+            // Execute the acceptance
+            acceptCallback.accept(game.id, botPlayer.getId());
+            log.info("Bot {} accepted score in game {}", botPlayer.getNickname(), game.id);
+            
+        } catch (InterruptedException e) {
+            log.warn("Bot negotiation accept interrupted for game {}", game.id);
+            Thread.currentThread().interrupt();
+        } catch (Exception e) {
+            log.error("Error executing bot negotiation accept for game {}: {}", game.id, e.getMessage(), e);
+        }
+    }
 }

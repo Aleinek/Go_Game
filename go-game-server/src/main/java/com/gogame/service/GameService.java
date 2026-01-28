@@ -258,6 +258,9 @@ public class GameService {
             notificationService.notifyNegotiationStarted(
                 game.whitePlayer.getId(), chainSuggestions, game.komi
             );
+            
+            // If there's a bot in the game, schedule automatic acceptance
+            scheduleBotNegotiationAcceptIfNeeded(game);
         }
         
         // Save game state to MongoDB
@@ -719,6 +722,54 @@ public class GameService {
             pass(gameId, botPlayerId);
         } catch (Exception e) {
             log.error("Failed to execute bot pass for game {}: {}", gameId, e.getMessage(), e);
+        }
+    }
+    
+    /**
+     * Schedules automatic score acceptance for bot players during negotiation.
+     */
+    private void scheduleBotNegotiationAcceptIfNeeded(Game game) {
+        if (botMoveScheduler == null) {
+            log.debug("BotMoveScheduler not configured, skipping bot negotiation check");
+            return;
+        }
+        
+        if (game.status != GameStatus.NEGOTIATING) {
+            return;
+        }
+        
+        // Check if black player is a bot
+        if (game.blackPlayer.isBot()) {
+            log.info("Scheduling bot negotiation accept for game {} (bot: {})", 
+                game.id, game.blackPlayer.getNickname());
+            botMoveScheduler.scheduleBotNegotiationAccept(
+                game,
+                game.blackPlayer,
+                this::executeBotAcceptScore
+            );
+        }
+        
+        // Check if white player is a bot
+        if (game.whitePlayer.isBot()) {
+            log.info("Scheduling bot negotiation accept for game {} (bot: {})", 
+                game.id, game.whitePlayer.getNickname());
+            botMoveScheduler.scheduleBotNegotiationAccept(
+                game,
+                game.whitePlayer,
+                this::executeBotAcceptScore
+            );
+        }
+    }
+    
+    /**
+     * Executes score acceptance by the bot.
+     */
+    private void executeBotAcceptScore(UUID gameId, UUID botPlayerId) {
+        try {
+            log.info("Bot {} accepting score for game {}", botPlayerId, gameId);
+            acceptScore(gameId, botPlayerId);
+        } catch (Exception e) {
+            log.error("Failed to execute bot score accept for game {}: {}", gameId, e.getMessage(), e);
         }
     }
 }
